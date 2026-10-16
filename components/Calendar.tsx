@@ -92,7 +92,7 @@ export default function Calendar({
       timeRangesFeature={{ showHeaderElements: true }}
       eventRenderer={({ eventRecord }: { eventRecord: EventModel }) => {
         const e = eventRecord as EventModel & { get(f: string): string };
-        return `<div class="hs-ev"><b>${esc(e.name)}</b><span>${esc(e.get("service"))}</span><span class="hs-badge">${esc(e.get("badge"))}</span></div>`;
+        return `<div class="hs-ev"><b>${esc(e.name)}</b><span class="hs-badge">${esc(e.get("badge"))}</span><span>${esc(e.get("service"))}</span></div>`;
       }}
       eventTooltipFeature={{ template: ({ eventRecord }: { eventRecord: EventModel & { get(f: string): string } }) => `${esc(eventRecord.name)} · ${esc(eventRecord.get("service"))}<br>${esc(eventRecord.get("badge"))}` }}
       onEventClick={({ eventRecord }: { eventRecord: EventModel }) => onSelect(String(eventRecord.id))}

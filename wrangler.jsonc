@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "holdslot",
+  "main": "worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  // The hold sweep, once a minute (worker.ts → /api/sweep).
+  "triggers": { "crons": ["* * * * *"] },
+  "observability": { "enabled": true },
+  "vars": {
+    "PAYPAL_API_BASE": "https://api-m.sandbox.paypal.com",
+    "APP_URL": "https://holdslot.ramy-comm.workers.dev",
+    // The in-process timer is for `next start`; on Workers the cron trigger runs the sweep.
+    "SWEEP": "off"
+  },
+  "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "HYPERDRIVE_ID_PENDING" }]
+  // Secrets (wrangler secret put): PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_WEBHOOK_ID,
+  // ANTHROPIC_API_KEY, SESSION_SECRET, OWNER_PASSCODE, SWEEP_SECRET, DEMO_VAULT_ID
+}

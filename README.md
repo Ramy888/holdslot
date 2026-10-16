@@ -13,7 +13,7 @@ No-shows cost salons, clinics and tutors 10-20% of their revenue. Charging every
 6. **Policy in plain English.** The owner writes the cancellation policy in their own words; Claude turns it into rules the owner checks. Every money decision after that is deterministic code, never the model.
 
 ## Stack
-Next.js on Render, Postgres, PayPal sandbox (Vault v3, Orders v2 AUTHORIZE, Payments v2 void/capture, webhooks), Claude (Anthropic API), Bryntum Scheduler.
+Next.js on Cloudflare Workers (OpenNext), Postgres through Cloudflare Hyperdrive, a Cloudflare cron trigger for the once-a-minute hold sweep, PayPal sandbox (Vault v3, Orders v2 AUTHORIZE, Payments v2 void/capture, webhooks), Claude (Anthropic API), Bryntum Scheduler.
 
 The PayPal REST client (`lib/paypal.mjs`) is copied from the author's other entry, CollectPilot. Everything else is new.
 
@@ -25,6 +25,8 @@ npm run migrate           # creates tables and the demo business
 npm run dev               # http://localhost:3000
 npm test                  # unit tests; set TEST_DATABASE_URL for the Postgres end-to-end tests
 ```
+
+Deploy to Cloudflare: `npm run cf:deploy` (needs the Hyperdrive id in `wrangler.jsonc` and the secrets listed there, set with `wrangler secret put`). Run `npm run migrate` against the production database first; Workers don't run it on start.
 
 `npm run verify:sandbox -- start` checks the PayPal money loop (vault → authorize → partial capture / void) on your sandbox app.
 

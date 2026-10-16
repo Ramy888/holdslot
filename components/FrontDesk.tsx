@@ -37,11 +37,20 @@ export function FrontDesk({
   const [error, setError] = useState<string | null>(null);
   const selected = bookings.find((b) => b.id === selectedId) ?? null;
 
-  // Live: any booking change (sweep, PayPal webhook, a client cancelling) refreshes the page data.
+  // Live: polls a cheap change marker and refreshes the page when a booking, the activity
+  // log or the demo clock moved (the sweep, a PayPal webhook, a client cancelling).
   useEffect(() => {
-    const es = new EventSource("/api/stream");
-    es.onmessage = () => router.refresh();
-    return () => es.close();
+    let last: string | null = null;
+    const tick = async () => {
+      if (document.hidden) return;
+      const res = await fetch("/api/changes", { cache: "no-store" }).catch(() => null);
+      const mark = res?.ok ? (await res.json()).mark : null;
+      if (mark && last && mark !== last) router.refresh();
+      if (mark) last = mark;
+    };
+    tick();
+    const id = setInterval(tick, 4000);
+    return () => clearInterval(id);
   }, [router]);
 
   const act = (fn: () => Promise<ActionResult>) =>

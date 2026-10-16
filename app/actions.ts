@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { advanceClock, checkIn, markNoShow, BookingError } from "@/lib/server/ops.mjs";
 import { pool } from "@/lib/server/db.mjs";
 import { resetDemo } from "@/lib/server/seed.mjs";
-import { notify } from "@/lib/server/events.mjs";
 import { isOwner } from "@/lib/server/owner";
 import { paypal } from "@/lib/server/paypal";
 
@@ -40,10 +39,7 @@ export async function noShowBooking(bookingId: string) {
 }
 
 export async function reset() {
-  return run(async () => {
-    await resetDemo(pool());
-    notify({ type: "reset" });
-  });
+  return run(() => resetDemo(pool()));
 }
 
 export async function signOut() {

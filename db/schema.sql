@@ -89,3 +89,10 @@ CREATE TABLE IF NOT EXISTS webhook_events (
   event_type   text NOT NULL,
   received_at  timestamptz NOT NULL DEFAULT now()
 );
+
+-- Lease so only one sweep runs at a time (see lib/server/ops.mjs).
+CREATE TABLE IF NOT EXISTS sweep_lock (
+  id            int PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  locked_until  timestamptz NOT NULL DEFAULT 'epoch'
+);
+INSERT INTO sweep_lock (id) VALUES (1) ON CONFLICT DO NOTHING;

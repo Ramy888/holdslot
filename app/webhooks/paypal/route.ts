@@ -1,6 +1,5 @@
 import { describeEvent, MAX_BODY, verifyWebhook } from "@/lib/webhook.mjs";
 import { logActivity, pool } from "@/lib/server/db.mjs";
-import { notify } from "@/lib/server/events.mjs";
 import { paypal } from "@/lib/server/paypal";
 
 export async function POST(req: Request) {
@@ -16,7 +15,6 @@ export async function POST(req: Request) {
     const { rows } = await db.query("SELECT id FROM bookings WHERE authorization_id = $1", [info.authorizationId]);
     if (rows[0]) {
       await logActivity({ bookingId: rows[0].id, at: new Date(), kind: info.kind, message: info.message });
-      notify({ type: "paypal", bookingId: rows[0].id });
     }
   }
   console.log(JSON.stringify({ msg: fresh.rowCount ? "webhook verified" : "webhook duplicate", id: event.id, event_type: event.event_type }));
