@@ -2,6 +2,7 @@
 //   npm run verify:sandbox -- start            → prints a PayPal approval link (log in as the sandbox BUYER)
 //   npm run verify:sandbox -- finish <setupId> → vaults the account, then hold → partial capture,
 //                                                hold → void, hold → reauthorize, and prints a pass/fail table
+//   add --keep to keep the vaulted account and print it as DEMO_VAULT_ID for the seeded demo clients
 import { randomUUID } from "node:crypto";
 import { createPayPalClient } from "../lib/paypal.mjs";
 import { placeHold, releaseHold, captureHold } from "../lib/holds.mjs";
@@ -12,7 +13,8 @@ if (!PAYPAL_API_BASE?.includes("sandbox") || !PAYPAL_CLIENT_ID || !PAYPAL_CLIENT
   process.exit(1);
 }
 const paypal = createPayPalClient({ apiBase: PAYPAL_API_BASE, clientId: PAYPAL_CLIENT_ID, clientSecret: PAYPAL_CLIENT_SECRET });
-const [cmd, arg] = process.argv.slice(2);
+const [cmd, arg] = process.argv.slice(2).filter((a) => a !== "--keep");
+const keep = process.argv.includes("--keep");
 const results = [];
 async function step(name, fn) {
   try {
@@ -67,9 +69,10 @@ if (cmd === "start") {
       });
       await step("void the third hold (cleanup)", async () => releaseHold({ paypal, authorizationId: c, requestId: randomUUID() }));
     }
-    await step("delete vaulted token (cleanup)", async () => paypal.request("DELETE", `/v3/vault/payment-tokens/${pt}`));
+    if (!keep) await step("delete vaulted token (cleanup)", async () => paypal.request("DELETE", `/v3/vault/payment-tokens/${pt}`));
   }
   console.table(results);
+  if (keep && pt) console.log(`\nKept the vaulted account. Put this in .env (and on Render) for the demo clients:\nDEMO_VAULT_ID=${pt}`);
 } else {
   console.error("Usage: verify:sandbox -- start | finish <setupTokenId>");
   process.exit(1);

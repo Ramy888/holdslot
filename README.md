@@ -28,5 +28,12 @@ npm test                  # unit tests; set TEST_DATABASE_URL for the Postgres e
 
 `npm run verify:sandbox -- start` checks the PayPal money loop (vault → authorize → partial capture / void) on your sandbox app.
 
+## Demo data
+`npm run migrate` (and **Reset demo** on the front desk) creates Juniper Hair Studio: two stylists, four services, and a week of bookings from five made-up clients (`@example.com`) with different histories, so the risk score has something to work with.
+
+So judges can watch real PayPal holds without approving PayPal themselves, the seeded clients who "approved PayPal" all share **one sandbox buyer's vaulted account**, set as `DEMO_VAULT_ID`. Create it once with `npm run verify:sandbox -- start`, approve the link as the sandbox buyer, then `npm run verify:sandbox -- finish <setupTokenId> --keep`. Every hold, release and charge on those bookings is a real sandbox PayPal call; only the client histories are invented. New bookings made in the chat go through the normal one-time PayPal approval.
+
+Use **+3 hours** and **+1 day** to move the demo clock: holds go on 48 hours before a slot, and a slot nobody checks in to is settled 15 minutes after it starts.
+
 ## License
 MIT

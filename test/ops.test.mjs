@@ -119,6 +119,28 @@ test("a slot can't be double-booked", { skip }, async () => {
   await assert.rejects(ops.createBooking({ serviceId: "color", staffId: slot.staffId, startAt: slot.startAt, name: "B", email: "b@example.com" }), /taken/);
 });
 
+test("one big clock jump still holds before it charges", { skip }, async () => {
+  const paypal = fakePayPal();
+  const bk = await bookTomorrow({ email: "new@example.com", name: "New Client", hour: 16 });
+  const b0 = await store.getBooking(bk.id, db);
+  const hoursTo = (new Date(b0.startAt) - ops.clockNow(await store.getSettings(db))) / 3_600_000;
+  await ops.advanceClock({ paypal, hours: hoursTo + 2 });
+  const b = await store.getBooking(bk.id, db);
+  assert.equal(b.status, "charged", "placed the hold on the way, then charged the no-show");
+});
+
+test("a PayPal outage while placing a hold is retried, not marked declined", { skip }, async () => {
+  const ok = fakePayPal();
+  const down = { request: async () => { throw new Error("PayPal POST /v2/checkout/orders failed: 503"); } };
+  const bk = await bookTomorrow({ email: "new@example.com", name: "New Client", hour: 13 });
+  const b0 = await store.getBooking(bk.id, db);
+  const hoursTo = (new Date(b0.startAt) - ops.clockNow(await store.getSettings(db))) / 3_600_000;
+  await ops.advanceClock({ paypal: down, hours: hoursTo - 40 });
+  assert.equal((await store.getBooking(bk.id, db)).status, "booked");
+  await ops.runSweep({ paypal: ok });
+  assert.equal((await store.getBooking(bk.id, db)).status, "held");
+});
+
 test("reset demo re-seeds and rewinds the clock", { skip }, async () => {
   await seed.resetDemo(db);
   const s = await store.getSettings(db);
