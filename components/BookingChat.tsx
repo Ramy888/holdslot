@@ -44,8 +44,19 @@ export function BookingChat({ businessName }: { businessName: string }) {
     setInput("");
     setBusy(true);
     setError(null);
+    let res: Response;
     try {
-      const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ history: next }) });
+      res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ history: next }) });
+    } catch {
+      // The connection dropped before any answer. Not retried automatically: the first try may
+      // have booked. Give the message back so one tap resends it.
+      setMessages(messages);
+      setInput(content);
+      setError("The connection dropped before the receptionist answered. Your message is back in the box: press Send to try again.");
+      setBusy(false);
+      return;
+    }
+    try {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Something went wrong.");
       setMessages([...next, { role: "assistant", content: json.reply }]);
