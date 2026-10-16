@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-// Signed cookie values: "<value>.<hmac>". Used to remember which payer this browser connected.
+// Signed cookie values: "<value>.<hmac>". Used for the owner sign-in.
 const secret = () => {
   const s = process.env.SESSION_SECRET;
   if (!s) throw new Error("SESSION_SECRET is not set");

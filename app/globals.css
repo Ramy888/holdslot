@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+/* HoldSlot: a salon front desk. Cream paper, plum ink, and three money colours:
+   amber = held (not charged), teal = released, rose = charged. */
+:root {
+  --paper: #faf6f0;
+  --card: #ffffff;
+  --ink: #2a1730;
+  --muted: #6e5f6f;
+  --line: #eadfd4;
+  --plum: #5b2a63;
+  --held: #b45309;
+  --held-soft: #fdf0dc;
+  --released: #0f766e;
+  --released-soft: #ddf2ee;
+  --charged: #be123c;
+  --charged-soft: #fde4ea;
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-plum: var(--plum);
+  --color-held: var(--held);
+  --color-held-soft: var(--held-soft);
+  --color-released: var(--released);
+  --color-released-soft: var(--released-soft);
+  --color-charged: var(--charged);
+  --color-charged-soft: var(--charged-soft);
+  --font-sans: var(--font-instrument);
+  --font-display: var(--font-fraunces);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--plum);
+  outline-offset: 2px;
+}
+
+/* Calendar bars (Bryntum). */
+.hs-ev {
+  display: grid;
+  gap: 1px;
+  line-height: 1.2;
+  font-size: 12px;
+  overflow: hidden;
+}
+.hs-ev span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hs-badge {
+  font-weight: 600;
+}
+.hs-cancelled .hs-ev {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+.b-sch-range.hs-now,
+.b-sch-timerange.hs-now {
+  border-left: 2px solid var(--charged);
+  background: transparent;
+}

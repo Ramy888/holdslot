@@ -98,3 +98,19 @@ test("compilePolicy normalizes the model's rules (model faked)", async () => {
   assert.equal(r.no_show_fee.value, 100);
   await assert.rejects(compilePolicy({ anthropic, text: "  " }));
 });
+
+import { describeEvent, verifyWebhook } from "../lib/webhook.mjs";
+
+test("webhook: capture events map back to their authorization", () => {
+  const cap = describeEvent({ event_type: "PAYMENT.CAPTURE.COMPLETED", resource: { amount: { value: "30.00" }, supplementary_data: { related_ids: { authorization_id: "A9" } } } });
+  assert.deepEqual(cap, { authorizationId: "A9", message: "PayPal confirmed $30 was collected.", kind: "paypal_capture_completed" });
+  assert.equal(describeEvent({ event_type: "PAYMENT.AUTHORIZATION.VOIDED", resource: { id: "A1" } }).authorizationId, "A1");
+  assert.equal(describeEvent({ event_type: "INVOICING.INVOICE.PAID", resource: {} }), null);
+});
+
+test("webhook: unsigned or unverified requests are rejected", async () => {
+  const headers = Object.fromEntries(["paypal-auth-algo", "paypal-cert-url", "paypal-transmission-id", "paypal-transmission-sig", "paypal-transmission-time"].map((h) => [h, "x"]));
+  assert.equal((await verifyWebhook({ headers: {}, rawBody: "{}", webhookId: "W", paypal: {} })).status, 400);
+  assert.equal((await verifyWebhook({ headers, rawBody: "{}", webhookId: "W", paypal: { verifyWebhookSignature: async () => false } })).status, 401);
+  assert.equal((await verifyWebhook({ headers, rawBody: '{"id":"E1"}', webhookId: "W", paypal: { verifyWebhookSignature: async () => true } })).event.id, "E1");
+});

@@ -82,3 +82,10 @@ CREATE TABLE IF NOT EXISTS activity (
   amount      numeric(10,2)
 );
 CREATE INDEX IF NOT EXISTS activity_recent ON activity (at DESC);
+
+-- PayPal webhook deliveries already handled (PayPal retries).
+CREATE TABLE IF NOT EXISTS webhook_events (
+  id           text PRIMARY KEY,
+  event_type   text NOT NULL,
+  received_at  timestamptz NOT NULL DEFAULT now()
+);
