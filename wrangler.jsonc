@@ -10,11 +10,9 @@
   "observability": { "enabled": true },
   "vars": {
     "PAYPAL_API_BASE": "https://api-m.sandbox.paypal.com",
-    "APP_URL": "https://holdslot.ramy-comm.workers.dev",
-    // The in-process timer is for `next start`; on Workers the cron trigger runs the sweep.
-    "SWEEP": "off"
+    "APP_URL": "https://holdslot.ramy-comm.workers.dev"
   },
-  "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "HYPERDRIVE_ID_PENDING" }]
+  "d1_databases": [{ "binding": "DB", "database_name": "holdslot", "database_id": "e1da34a6-e7cb-467d-8c7e-444964fb820f" }]
   // Secrets (wrangler secret put): PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_WEBHOOK_ID,
   // ANTHROPIC_API_KEY, SESSION_SECRET, OWNER_PASSCODE, SWEEP_SECRET, DEMO_VAULT_ID
 }

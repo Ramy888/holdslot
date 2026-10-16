@@ -1,98 +1,104 @@
--- HoldSlot schema. Applied by scripts/migrate.mjs before every start; safe to re-run.
+-- HoldSlot schema for Cloudflare D1 (SQLite). Safe to re-run:
+--   npm run db:migrate         (remote D1)
+--   npm run db:migrate:local   (wrangler's local D1)
+-- Times are ISO-8601 UTC strings ("2026-10-23T22:00:00.000Z"), so text order is time order.
+-- Money is REAL dollars, rounded to cents by the app.
 
 CREATE TABLE IF NOT EXISTS settings (
-  id              int PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-  business_name   text NOT NULL DEFAULT 'Juniper Hair Studio',
-  time_zone       text NOT NULL DEFAULT 'America/New_York',
-  currency        text NOT NULL DEFAULT 'USD',
-  policy_text     text NOT NULL,
-  rules           jsonb NOT NULL,
-  clock_offset_ms bigint NOT NULL DEFAULT 0,  -- demo clock: added to the real time
-  updated_at      timestamptz NOT NULL DEFAULT now()
+  id              INTEGER PRIMARY KEY CHECK (id = 1),
+  business_name   TEXT NOT NULL DEFAULT 'Juniper Hair Studio',
+  time_zone       TEXT NOT NULL DEFAULT 'America/New_York',
+  currency        TEXT NOT NULL DEFAULT 'USD',
+  policy_text     TEXT NOT NULL,
+  rules           TEXT NOT NULL,              -- JSON, see lib/policy.mjs
+  clock_offset_ms INTEGER NOT NULL DEFAULT 0, -- demo clock: added to the real time
+  updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
 CREATE TABLE IF NOT EXISTS staff (
-  id    text PRIMARY KEY,
-  name  text NOT NULL,
-  color text NOT NULL
+  id    TEXT PRIMARY KEY,
+  name  TEXT NOT NULL,
+  color TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS services (
-  id           text PRIMARY KEY,
-  name         text NOT NULL,
-  duration_min int NOT NULL CHECK (duration_min > 0),
-  price        numeric(10,2) NOT NULL CHECK (price >= 0)
+  id           TEXT PRIMARY KEY,
+  name         TEXT NOT NULL,
+  duration_min INTEGER NOT NULL CHECK (duration_min > 0),
+  price        REAL NOT NULL CHECK (price >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS clients (
-  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name          text NOT NULL,
-  email         text NOT NULL UNIQUE,
-  visits        int NOT NULL DEFAULT 0,
-  no_shows      int NOT NULL DEFAULT 0,
-  late_cancels  int NOT NULL DEFAULT 0,
-  vault_id      text,               -- PayPal payment token, capped by the approval text
-  paypal_email  text,
-  created_at    timestamptz NOT NULL DEFAULT now()
+  id            TEXT PRIMARY KEY,
+  name          TEXT NOT NULL,
+  email         TEXT NOT NULL UNIQUE,
+  visits        INTEGER NOT NULL DEFAULT 0,
+  no_shows      INTEGER NOT NULL DEFAULT 0,
+  late_cancels  INTEGER NOT NULL DEFAULT 0,
+  vault_id      TEXT,               -- PayPal payment token, capped by the approval text
+  paypal_email  TEXT,
+  created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
 CREATE TABLE IF NOT EXISTS bookings (
-  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  public_id         text NOT NULL UNIQUE,
-  client_id         uuid NOT NULL REFERENCES clients(id),
-  service_id        text NOT NULL REFERENCES services(id),
-  staff_id          text NOT NULL REFERENCES staff(id),
-  start_at          timestamptz NOT NULL,
-  end_at            timestamptz NOT NULL,
-  price             numeric(10,2) NOT NULL,
-  status            text NOT NULL,
-  risk_score        int NOT NULL,
-  risk_tier         text NOT NULL,
-  risk_reasons      text[] NOT NULL DEFAULT '{}',
-  hold_amount       numeric(10,2) NOT NULL DEFAULT 0,
-  order_id          text,
-  authorization_id  text,
-  hold_expires_at   timestamptz,
-  capture_id        text,
-  charged_amount    numeric(10,2) NOT NULL DEFAULT 0,
-  checked_in_at     timestamptz,
-  cancelled_at      timestamptz,
-  source            text NOT NULL DEFAULT 'chat',
-  booked_at         timestamptz NOT NULL,
-  updated_at        timestamptz NOT NULL DEFAULT now()
+  id                TEXT PRIMARY KEY,
+  public_id         TEXT NOT NULL UNIQUE,
+  client_id         TEXT NOT NULL REFERENCES clients(id),
+  service_id        TEXT NOT NULL REFERENCES services(id),
+  staff_id          TEXT NOT NULL REFERENCES staff(id),
+  start_at          TEXT NOT NULL,
+  end_at            TEXT NOT NULL,
+  price             REAL NOT NULL,
+  status            TEXT NOT NULL,
+  risk_score        INTEGER NOT NULL,
+  risk_tier         TEXT NOT NULL,
+  risk_reasons      TEXT NOT NULL DEFAULT '[]', -- JSON array
+  hold_amount       REAL NOT NULL DEFAULT 0,
+  order_id          TEXT,
+  authorization_id  TEXT,
+  hold_expires_at   TEXT,
+  capture_id        TEXT,
+  charged_amount    REAL NOT NULL DEFAULT 0,
+  checked_in_at     TEXT,
+  cancelled_at      TEXT,
+  source            TEXT NOT NULL DEFAULT 'chat',
+  booked_at         TEXT NOT NULL,
+  updated_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 CREATE INDEX IF NOT EXISTS bookings_open ON bookings (status, start_at);
+CREATE INDEX IF NOT EXISTS bookings_authorization ON bookings (authorization_id);
 
 CREATE TABLE IF NOT EXISTS pending_approvals (
-  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  setup_token_id  text NOT NULL UNIQUE,
-  nonce_hash      text NOT NULL,
-  booking_id      uuid NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
-  expires_at      timestamptz NOT NULL,
-  used_at         timestamptz
+  id              TEXT PRIMARY KEY,
+  setup_token_id  TEXT NOT NULL UNIQUE,
+  nonce_hash      TEXT NOT NULL,
+  booking_id      TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  expires_at      TEXT NOT NULL,
+  used_at         TEXT
 );
+CREATE INDEX IF NOT EXISTS pending_nonce ON pending_approvals (nonce_hash);
 
 -- What the agent did and why, shown on the calendar and the client's booking page.
 CREATE TABLE IF NOT EXISTS activity (
-  id          bigserial PRIMARY KEY,
-  booking_id  uuid REFERENCES bookings(id) ON DELETE CASCADE,
-  at          timestamptz NOT NULL,
-  kind        text NOT NULL,
-  message     text NOT NULL,
-  amount      numeric(10,2)
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  booking_id  TEXT REFERENCES bookings(id) ON DELETE CASCADE,
+  at          TEXT NOT NULL,
+  kind        TEXT NOT NULL,
+  message     TEXT NOT NULL,
+  amount      REAL
 );
-CREATE INDEX IF NOT EXISTS activity_recent ON activity (at DESC);
+CREATE INDEX IF NOT EXISTS activity_booking ON activity (booking_id);
 
 -- PayPal webhook deliveries already handled (PayPal retries).
 CREATE TABLE IF NOT EXISTS webhook_events (
-  id           text PRIMARY KEY,
-  event_type   text NOT NULL,
-  received_at  timestamptz NOT NULL DEFAULT now()
+  id           TEXT PRIMARY KEY,
+  event_type   TEXT NOT NULL,
+  received_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
 -- Lease so only one sweep runs at a time (see lib/server/ops.mjs).
 CREATE TABLE IF NOT EXISTS sweep_lock (
-  id            int PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-  locked_until  timestamptz NOT NULL DEFAULT 'epoch'
+  id            INTEGER PRIMARY KEY CHECK (id = 1),
+  locked_until  TEXT NOT NULL DEFAULT '1970-01-01T00:00:00.000Z'
 );
-INSERT INTO sweep_lock (id) VALUES (1) ON CONFLICT DO NOTHING;
+INSERT OR IGNORE INTO sweep_lock (id) VALUES (1);

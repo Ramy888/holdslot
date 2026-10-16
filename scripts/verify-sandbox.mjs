@@ -72,7 +72,7 @@ if (cmd === "start") {
     if (!keep) await step("delete vaulted token (cleanup)", async () => paypal.request("DELETE", `/v3/vault/payment-tokens/${pt}`));
   }
   console.table(results);
-  if (keep && pt) console.log(`\nKept the vaulted account. Put this in .env (and on Render) for the demo clients:\nDEMO_VAULT_ID=${pt}`);
+  if (keep && pt) console.log(`\nKept the vaulted account. Put this in .env (and as a Worker secret) for the demo clients:\nDEMO_VAULT_ID=${pt}`);
 } else {
   console.error("Usage: verify:sandbox -- start | finish <setupTokenId>");
   process.exit(1);

@@ -1,5 +1,5 @@
 import { describeEvent, MAX_BODY, verifyWebhook } from "@/lib/webhook.mjs";
-import { logActivity, pool } from "@/lib/server/db.mjs";
+import { bookingIdForAuthorization, logActivity, recordWebhook } from "@/lib/server/db.mjs";
 import { paypal } from "@/lib/server/paypal";
 
 export async function POST(req: Request) {
@@ -8,15 +8,10 @@ export async function POST(req: Request) {
   if (!result.event) return Response.json(result.body, { status: result.status });
 
   const event = result.event;
-  const db = pool();
-  const fresh = await db.query("INSERT INTO webhook_events (id, event_type) VALUES ($1, $2) ON CONFLICT DO NOTHING", [event.id, event.event_type]);
-  const info = fresh.rowCount ? describeEvent(event) : null;
-  if (info) {
-    const { rows } = await db.query("SELECT id FROM bookings WHERE authorization_id = $1", [info.authorizationId]);
-    if (rows[0]) {
-      await logActivity({ bookingId: rows[0].id, at: new Date(), kind: info.kind, message: info.message });
-    }
-  }
-  console.log(JSON.stringify({ msg: fresh.rowCount ? "webhook verified" : "webhook duplicate", id: event.id, event_type: event.event_type }));
+  const fresh = await recordWebhook({ id: event.id, eventType: event.event_type });
+  const info = fresh ? describeEvent(event) : null;
+  const bookingId = info && (await bookingIdForAuthorization(info.authorizationId));
+  if (info && bookingId) await logActivity({ bookingId, at: new Date(), kind: info.kind, message: info.message });
+  console.log(JSON.stringify({ msg: fresh ? "webhook verified" : "webhook duplicate", id: event.id, event_type: event.event_type }));
   return Response.json(result.body, { status: 200 });
 }

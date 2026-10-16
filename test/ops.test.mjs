@@ -1,11 +1,10 @@
-// End-to-end over a real Postgres with PayPal faked. Needs TEST_DATABASE_URL (skipped otherwise):
-//   createdb holdslot_test && TEST_DATABASE_URL=postgres://localhost/holdslot_test npm test
-import { test, before, after } from "node:test";
+// End-to-end over the real schema and queries (SQLite, the same dialect as Cloudflare D1)
+// with PayPal faked.
+import { test, before } from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { sqliteDatabase } from "./sqlite.mjs";
 
-const url = process.env.TEST_DATABASE_URL;
-const skip = !url && "TEST_DATABASE_URL not set";
+const skip = false;
 let ops, store, seed, db;
 
 function fakePayPal() {
@@ -27,19 +26,15 @@ function fakePayPal() {
 }
 
 before(async () => {
-  if (skip) return;
-  process.env.DATABASE_URL = url;
   delete process.env.DEMO_VAULT_ID;
+  db = sqliteDatabase();
+  globalThis.__holdslotDb = db;
   store = await import("../lib/server/db.mjs");
   ops = await import("../lib/server/ops.mjs");
   seed = await import("../lib/server/seed.mjs");
-  db = store.pool();
-  await db.query("DROP SCHEMA public CASCADE; CREATE SCHEMA public;");
-  await db.query(await readFile(new URL("../db/schema.sql", import.meta.url), "utf8"));
   assert.equal(await seed.seedIfEmpty(db), true);
   assert.equal(await seed.seedIfEmpty(db), false);
 });
-after(async () => db?.end());
 
 async function bookTomorrow({ email, name, hour = 15 }) {
   const settings = await store.getSettings(db);

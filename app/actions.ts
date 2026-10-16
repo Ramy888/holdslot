@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { advanceClock, checkIn, markNoShow, BookingError } from "@/lib/server/ops.mjs";
-import { pool } from "@/lib/server/db.mjs";
+import { database } from "@/lib/server/db.mjs";
 import { resetDemo } from "@/lib/server/seed.mjs";
 import { isOwner } from "@/lib/server/owner";
 import { paypal } from "@/lib/server/paypal";
@@ -39,7 +39,7 @@ export async function noShowBooking(bookingId: string) {
 }
 
 export async function reset() {
-  return run(() => resetDemo(pool()));
+  return run(() => resetDemo(database()));
 }
 
 export async function signOut() {

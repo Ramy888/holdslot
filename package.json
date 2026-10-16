@@ -5,14 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node --env-file-if-exists=.env scripts/migrate.mjs && next start",
     "lint": "eslint",
     "test": "node --test test/",
-    "migrate": "node --env-file=.env scripts/migrate.mjs",
     "verify:sandbox": "node --env-file=.env scripts/verify-sandbox.mjs",
     "cf:build": "NEXT_PRIVATE_STANDALONE=true NEXT_PRIVATE_OUTPUT_TRACE_ROOT=. next build && opennextjs-cloudflare build --skipNextBuild",
     "cf:preview": "npm run cf:build && wrangler dev",
-    "cf:deploy": "npm run cf:build && wrangler deploy"
+    "cf:deploy": "npm run cf:build && wrangler deploy",
+    "db:migrate": "wrangler d1 execute holdslot --remote --file db/schema.sql",
+    "db:migrate:local": "wrangler d1 execute holdslot --local --file db/schema.sql"
   },
   "engines": {
     "node": ">=22"
@@ -22,7 +22,6 @@
     "@bryntum/scheduler": "npm:@bryntum/scheduler-trial@^7.3.7",
     "@bryntum/scheduler-react": "^7.3.7",
     "next": "16.4.2",
-    "pg": "^8.23.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "zod": "^4.6.7"
@@ -31,7 +30,6 @@
     "@opennextjs/cloudflare": "^1.20.12",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^20.19.43",
-    "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "eslint": "^9.39.5",
