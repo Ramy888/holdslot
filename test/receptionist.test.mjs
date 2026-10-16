@@ -44,3 +44,9 @@ test("a failing tool goes back to the model as an error, not a crash", async () 
 test("rejects an empty or assistant-last history", async () => {
   await assert.rejects(receptionistTurn({ anthropic: fakeAnthropic([]), system: "s", history: [{ role: "assistant", content: "hi" }], tools: {} }));
 });
+
+test("markdown emphasis is stripped from replies", async () => {
+  const anthropic = fakeAnthropic([text("Booked for **5:00 PM with Leo**.")]);
+  const out = await receptionistTurn({ anthropic, system: "s", history: [{ role: "user", content: "hi" }], tools: {} });
+  assert.equal(out.reply, "Booked for 5:00 PM with Leo.");
+});

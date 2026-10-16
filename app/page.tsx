@@ -1,82 +1,59 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { connection } from "next/server";
-import { redirect } from "next/navigation";
-import { FrontDesk } from "@/components/FrontDesk";
-import { getSettings, listBookings, listStaff, recentActivity } from "@/lib/server/db.mjs";
-import { clockNow } from "@/lib/server/ops.mjs";
-import { formatSlot } from "@/lib/slots.mjs";
-import { isOwner } from "@/lib/server/owner";
-import { signOut } from "./actions";
 
-export const metadata: Metadata = { title: "Front desk · HoldSlot" };
+export const metadata: Metadata = {
+  title: "HoldSlot · Deposits that only hold",
+  description: "An AI receptionist for salons, clinics and tutors that holds a PayPal deposit instead of charging it.",
+};
 
-export default async function FrontDeskPage() {
-  await connection();
-  if (!(await isOwner())) redirect("/login");
-  const settings = await getSettings();
-  const now = clockNow(settings);
-  const [staff, bookings, activity] = await Promise.all([
-    listStaff(),
-    listBookings({ from: new Date(now.getTime() - 2 * 86_400_000), to: new Date(now.getTime() + 8 * 86_400_000) }),
-    recentActivity(40),
-  ]);
-  const tz = settings.timeZone;
-  const iso = (d: Date | string) => new Date(d).toISOString();
-  const totals = {
-    held: bookings.filter((b) => b.status === "held").reduce((s, b) => s + b.holdAmount, 0),
-    charged: bookings.reduce((s, b) => s + b.chargedAmount, 0),
-    protected: bookings.filter((b) => b.status === "released" && b.holdAmount > 0).length,
-  };
+const STEPS = [
+  ["Book by chat", "Claude books the slot in plain English or Arabic, from real free times only."],
+  ["Score the risk", "First visit, past no-shows, late cancels, Friday-evening slots. Regulars never see a deposit."],
+  ["Approve once, pay nothing", "A risky client approves PayPal once, capped at the no-show fee. Nothing is charged."],
+  ["Hold 48 hours before", "HoldSlot places a PayPal authorization. The hold shows on the studio's calendar."],
+  ["Settle at the slot", "Client arrives: the hold is voided. No-show: the fee is captured. Late cancel: part of it, the rest released."],
+] as const;
+
+// Public landing page: what HoldSlot is, and the two ways in (client and front desk).
+export default function Home() {
   return (
-    <main className="mx-auto grid w-full max-w-7xl gap-5 px-4 py-6">
-      <header className="flex flex-wrap items-center gap-3">
-        <span aria-hidden className="grid h-9 w-9 place-items-center rounded-md bg-plum font-display text-[15px] text-white">
+    <main className="mx-auto grid w-full max-w-3xl gap-10 px-4 py-12">
+      <header className="grid gap-3">
+        <span aria-hidden className="grid h-10 w-10 place-items-center rounded-md bg-plum font-display text-[17px] text-white">
           H
         </span>
-        <div className="mr-auto">
-          <h1 className="font-display text-2xl font-semibold tracking-tight">{settings.businessName}</h1>
-          <p className="text-sm text-muted">HoldSlot holds a deposit only when a booking looks risky, and only 48 hours before.</p>
+        <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">A deposit that only holds.</h1>
+        <p className="max-w-2xl text-lg text-muted">
+          No-shows cost salons, clinics and tutors 10–20% of their revenue. Charging everyone a deposit loses bookings; charging nobody loses money. HoldSlot is an AI
+          receptionist that asks only risky bookings for a PayPal hold, places it 48 hours before, and releases it the moment the client walks in.
+        </p>
+        <div className="flex flex-wrap gap-3 pt-2">
+          <Link href="/book" className="rounded-lg bg-plum px-5 py-3 text-sm font-semibold text-white">
+            Book as a client
+          </Link>
+          <Link href="/desk" className="rounded-lg border border-line bg-card px-5 py-3 text-sm font-semibold">
+            Open the studio&apos;s front desk
+          </Link>
         </div>
-        <nav className="flex items-center gap-3 text-sm">
-          <Link href="/book" className="underline">
-            Booking chat
-          </Link>
-          <Link href="/policy" className="underline">
-            Policy
-          </Link>
-          <form action={signOut}>
-            <button className="text-muted underline">Sign out</button>
-          </form>
-        </nav>
+        <p className="text-sm text-muted">Demo studio: Juniper Hair Studio, on the PayPal sandbox. The front desk passcode is in the hackathon testing instructions.</p>
       </header>
-      <FrontDesk
-        staff={staff}
-        now={iso(now)}
-        nowLabel={formatSlot(now, tz)}
-        timeZone={tz}
-        totals={totals}
-        bookings={bookings.map((b) => ({
-          id: b.id,
-          publicId: b.publicId,
-          staffId: b.staffId,
-          startAt: iso(b.startAt),
-          endAt: iso(b.endAt),
-          startLabel: formatSlot(b.startAt, tz),
-          clientName: b.clientName,
-          serviceName: b.serviceName,
-          status: b.status,
-          price: b.price,
-          holdAmount: b.holdAmount,
-          chargedAmount: b.chargedAmount,
-          riskTier: b.riskTier,
-          riskScore: b.riskScore,
-          riskReasons: b.riskReasons,
-          authorizationId: b.authorizationId,
-          captureId: b.captureId,
-        }))}
-        activity={activity.map((a) => ({ id: a.id, at: iso(a.at), atLabel: formatSlot(a.at, tz), kind: a.kind, message: a.message, amount: a.amount }))}
-      />
+
+      <ol className="grid gap-3">
+        {STEPS.map(([title, body], i) => (
+          <li key={title} className="grid grid-cols-[2rem_1fr] gap-3 rounded-2xl border border-line bg-card p-4">
+            <span className="font-display text-xl font-semibold text-plum">{i + 1}</span>
+            <div>
+              <p className="font-semibold">{title}</p>
+              <p className="text-sm text-muted">{body}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <p className="text-sm text-muted">
+        Built on PayPal Vault, Orders (authorize) and Payments (void, capture), with Claude and a Bryntum Scheduler calendar. The owner writes the cancellation policy in
+        plain English; Claude turns it into rules, and every money decision after that is plain code.
+      </p>
     </main>
   );
 }

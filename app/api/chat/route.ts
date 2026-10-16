@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     const { reply, booking } = await chat(history);
     return Response.json({
       reply,
-      booking: booking && { publicId: booking.publicId, when: booking.startLabel, service: booking.service.name, needsApproval: booking.needsApproval, holdAmount: booking.holdAmount, riskTier: booking.risk.tier },
+      booking: booking && { publicId: booking.publicId, when: booking.startLabel, service: booking.service.name, needsApproval: booking.needsApproval, holdAmount: booking.holdAmount, holdWhen: booking.holdWhen, riskTier: booking.risk.tier },
     });
   } catch (err) {
     console.error(JSON.stringify({ msg: "chat failed", error: String(err) }));

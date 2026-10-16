@@ -27,6 +27,6 @@ export async function savePolicy(form: FormData) {
   if (!(await isOwner())) redirect("/login");
   const rules = normalizeRules(JSON.parse(String(form.get("rules") ?? "{}")));
   await saveSettings({ policyText: String(form.get("policy") ?? ""), rules });
-  revalidatePath("/");
+  revalidatePath("/desk");
   redirect("/policy?saved=1");
 }

@@ -136,9 +136,16 @@ test("a PayPal outage while placing a hold is retried, not marked declined", { s
   assert.equal((await store.getBooking(bk.id, db)).status, "held");
 });
 
+test("check-in is refused hours before the slot", { skip }, async () => {
+  const bk = await bookTomorrow({ email: "new@example.com", name: "New Client", hour: 18 }); // has a vault, so "booked"
+  await assert.rejects(ops.checkIn({ paypal: fakePayPal(), bookingId: bk.id }), /2 hours before/);
+});
+
 test("reset demo re-seeds and rewinds the clock", { skip }, async () => {
+  await store.saveSettings({ rules: { ...(await store.getSettings(db)).rules, grace_minutes: 99 } }, db);
   await seed.resetDemo(db);
   const s = await store.getSettings(db);
   assert.equal(s.clockOffsetMs, 0);
+  assert.equal(s.rules.grace_minutes, 15, "a judge's policy edit is undone by reset");
   assert.equal((await store.openBookings(db)).length, 6);
 });

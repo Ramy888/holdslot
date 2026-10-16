@@ -16,7 +16,7 @@ export default async function PolicyPage({ searchParams }: PageProps<"/policy">)
   return (
     <main className="mx-auto grid w-full max-w-2xl gap-6 px-4 py-10">
       <header className="grid gap-1">
-        <Link href="/" className="text-sm underline">
+        <Link href="/desk" className="text-sm underline">
           ← Front desk
         </Link>
         <h1 className="font-display text-3xl font-semibold tracking-tight">Cancellation policy</h1>

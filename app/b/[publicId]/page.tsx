@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { bookingActivity, getBookingByPublicId, getSettings } from "@/lib/server/db.mjs";
 import { clockNow } from "@/lib/server/ops.mjs";
 import { cancellationFee } from "@/lib/policy.mjs";
-import { holdHoursBefore } from "@/lib/lifecycle.mjs";
+import { holdWhen } from "@/lib/lifecycle.mjs";
 import { formatSlot } from "@/lib/slots.mjs";
 import { STATUS, TONE_CLASS, usd } from "@/lib/statusCopy";
 import { cancel } from "./actions";
@@ -58,8 +58,8 @@ export default async function BookingPage({ params, searchParams }: PageProps<"/
         {b.status === "awaiting_approval" && (
           <>
             <p className="text-sm text-ink">
-              This booking needs a deposit hold of up to <strong>{usd(b.holdAmount)}</strong>. Approve PayPal once: nothing is charged now. {holdHoursBefore(settings.rules)} hours before
-              your visit PayPal holds the amount; it&apos;s released when you arrive, and charged only if you miss the appointment.
+              This booking needs a deposit hold of up to <strong>{usd(b.holdAmount)}</strong>. Approve PayPal once: nothing is charged now. PayPal holds the amount{" "}
+              {holdWhen(settings.rules, b.startAt, now)}; it&apos;s released when you arrive, and charged only if you miss the appointment.
             </p>
             <form action="/approve/start" method="post">
               <input type="hidden" name="booking" value={b.publicId} />
@@ -69,7 +69,7 @@ export default async function BookingPage({ params, searchParams }: PageProps<"/
         )}
         {b.status === "booked" && b.holdAmount > 0 && (
           <p className="text-sm text-ink">
-            PayPal approved. {usd(b.holdAmount)} will be held (not charged) {holdHoursBefore(settings.rules)} hours before your visit.
+            PayPal approved. {usd(b.holdAmount)} will be held (not charged) {holdWhen(settings.rules, b.startAt, now).replace("as soon as PayPal is approved", "in a moment")}.
           </p>
         )}
         {b.status === "held" && <p className="text-sm text-ink">{usd(b.holdAmount)} is on hold on your PayPal. It is released the moment you check in.</p>}

@@ -59,8 +59,8 @@ export default function Calendar({
   timeZone: string;
   onSelect: (id: string) => void;
 }) {
-  // Start a couple of hours before "now" (the demo clock), so the next appointments are in view.
-  const start = new Date(new Date(now).getTime() - 2 * 3_600_000);
+  // Start a few hours back so just-settled bookings (released, charged) are still in view.
+  const start = new Date(new Date(now).getTime() - 4 * 3_600_000);
   start.setMinutes(0, 0, 0);
   const end = new Date(start.getTime() + 7 * 86_400_000);
   return (

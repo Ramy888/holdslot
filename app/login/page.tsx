@@ -7,7 +7,7 @@ import { SignInForm } from "./SignInForm";
 export const metadata: Metadata = { title: "Sign in · HoldSlot" };
 
 export default async function LoginPage() {
-  if (await isOwner()) redirect("/");
+  if (await isOwner()) redirect("/desk");
   return (
     <main className="mx-auto grid min-h-full w-full max-w-sm content-center gap-6 px-4 py-16">
       <div className="grid gap-2">

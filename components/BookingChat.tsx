@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 type Msg = { role: "user" | "assistant"; content: string };
-type Booked = { publicId: string; when: string; service: string; needsApproval: boolean; holdAmount: number; riskTier: string };
+type Booked = { publicId: string; when: string; service: string; needsApproval: boolean; holdAmount: number; holdWhen: string; riskTier: string };
 
 // Minimal typing for the browser's speech recognition (Chrome/Safari prefix it).
 type Recognition = { lang: string; interimResults: boolean; start(): void; stop(): void; onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null };
@@ -30,7 +30,11 @@ export function BookingChat({ businessName }: { businessName: string }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCanListen(Boolean(w.SpeechRecognition ?? w.webkitSpeechRecognition));
   }, []);
-  useEffect(() => end.current?.scrollIntoView({ behavior: "smooth", block: "end" }), [messages, busy]);
+  // Braces matter: newer Chrome returns a Promise from scrollIntoView, and React would try
+  // to call an effect's return value as its cleanup.
+  useEffect(() => {
+    end.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, busy]);
 
   async function send(text: string) {
     const content = text.trim();
@@ -92,7 +96,7 @@ export function BookingChat({ businessName }: { businessName: string }) {
           </p>
           {booked.needsApproval ? (
             <p className="text-sm">
-              One step left: approve PayPal so the studio can hold up to <strong>{usd(booked.holdAmount)}</strong> 48 hours before your visit. Nothing is charged, and the hold is released when you arrive.
+              One step left: approve PayPal so the studio can hold up to <strong>{usd(booked.holdAmount)}</strong> {booked.holdWhen}. Nothing is charged, and the hold is released when you arrive.
             </p>
           ) : (
             <p className="text-sm">You&apos;re booked. No deposit needed.</p>

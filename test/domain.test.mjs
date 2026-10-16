@@ -114,3 +114,10 @@ test("webhook: unsigned or unverified requests are rejected", async () => {
   assert.equal((await verifyWebhook({ headers, rawBody: "{}", webhookId: "W", paypal: { verifyWebhookSignature: async () => false } })).status, 401);
   assert.equal((await verifyWebhook({ headers, rawBody: '{"id":"E1"}', webhookId: "W", paypal: { verifyWebhookSignature: async () => true } })).event.id, "E1");
 });
+
+import { holdWhen } from "../lib/lifecycle.mjs";
+
+test("hold timing in words: inside the window it is placed right away", () => {
+  assert.equal(holdWhen(DEFAULT_RULES, at(10), now), "as soon as PayPal is approved");
+  assert.equal(holdWhen(DEFAULT_RULES, at(72), now), "48 hours before the visit");
+});

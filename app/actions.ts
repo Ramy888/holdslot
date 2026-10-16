@@ -22,7 +22,7 @@ async function run(fn: () => Promise<unknown>): Promise<ActionResult> {
     if (!(err instanceof BookingError)) console.error(JSON.stringify({ msg: "front desk action failed", error: String(err) }));
     return { error: err instanceof Error ? err.message : "Something went wrong." };
   }
-  revalidatePath("/");
+  revalidatePath("/desk");
   return {};
 }
 

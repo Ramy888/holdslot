@@ -82,7 +82,8 @@ export function FrontDesk({
           </button>
         </div>
         <div className="h-[560px] overflow-hidden rounded-2xl border border-line bg-card">
-          <Calendar staff={staff} bookings={bookings} now={now} timeZone={timeZone} onSelect={setSelectedId} />
+          {/* Remount when the demo clock moves: Bryntum doesn't redraw cleanly when its time span jumps (e.g. Reset demo). */}
+          <Calendar key={now} staff={staff} bookings={bookings} now={now} timeZone={timeZone} onSelect={setSelectedId} />
         </div>
         <dl className="grid grid-cols-3 gap-3">
           <Tile label="On hold now" value={usd(totals.held)} tone="text-held" />
@@ -130,7 +131,21 @@ export function FrontDesk({
             </a>
           </div>
         ) : (
-          <p className="rounded-2xl border border-dashed border-line px-4 py-3 text-sm text-muted">Click a booking to see its risk and act on it.</p>
+          <div className="grid gap-2 rounded-2xl border border-dashed border-line px-4 py-3 text-sm">
+            <p className="font-semibold">Try it</p>
+            <ol className="grid list-decimal gap-1 pl-5 text-muted">
+              <li>Click a booking to see why it does or doesn&apos;t need a deposit.</li>
+              <li>Press <b>+3 hours</b> or <b>+1 day</b>: holds go on 48 hours before a slot, and a slot nobody checks in to is charged after the grace period.</li>
+              <li>Check a client in before their slot: the PayPal hold is released.</li>
+              <li>
+                Book as a new client in the{" "}
+                <a href="/book" target="_blank" className="underline">
+                  booking chat
+                </a>
+                .
+              </li>
+            </ol>
+          </div>
         )}
         <div className="grid gap-2">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">What HoldSlot did</h2>
