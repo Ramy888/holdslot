@@ -59,10 +59,21 @@ export default function Calendar({
   timeZone: string;
   onSelect: (id: string) => void;
 }) {
+  // Bryntum gets the studio's wall-clock times as plain local dates (no timeZone config): with its
+  // timeZone option the working-hours filter still ran in the viewer's own zone, so anyone east of
+  // the studio saw its afternoons hidden and the view start a day late.
+  const wall = (instant: string | number) => {
+    const p = Object.fromEntries(
+      new Intl.DateTimeFormat("en-US", { timeZone, hourCycle: "h23", year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric" })
+        .formatToParts(new Date(instant))
+        .map((x) => [x.type, x.value]),
+    );
+    return new Date(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);
+  };
   // Start a few hours back so just-settled bookings (released, charged) are still in view.
-  const start = new Date(new Date(now).getTime() - 4 * 3_600_000);
+  const start = wall(new Date(now).getTime() - 4 * 3_600_000);
   start.setMinutes(0, 0, 0);
-  const end = new Date(start.getTime() + 7 * 86_400_000);
+  const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7, start.getHours());
   return (
     <BryntumScheduler
       startDate={start}
@@ -70,7 +81,6 @@ export default function Calendar({
       mode="vertical"
       viewPreset="hourAndDay"
       resourceColumns={{ columnWidth: 120, fillWidth: true }}
-      timeZone={timeZone}
       workingTime={{ fromHour: 9, toHour: 19, fromDay: 0, toDay: 7 }}
       tickSize={64}
       barMargin={4}
@@ -80,15 +90,15 @@ export default function Calendar({
       events={bookings.map((b) => ({
         id: b.id,
         resourceId: b.staffId,
-        startDate: b.startAt,
-        endDate: b.endAt,
+        startDate: wall(b.startAt),
+        endDate: wall(b.endAt),
         name: b.clientName,
         eventColor: COLORS[b.status] ?? "#5b2a63",
         cls: `hs-${b.status}`,
         service: b.serviceName,
         badge: badge(b),
       }))}
-      timeRanges={[{ id: "now", startDate: new Date(now), name: "Now", cls: "hs-now" }]}
+      timeRanges={[{ id: "now", startDate: wall(now), name: "Now", cls: "hs-now" }]}
       timeRangesFeature={{ showHeaderElements: true }}
       eventRenderer={({ eventRecord }: { eventRecord: EventModel }) => {
         const e = eventRecord as EventModel & { get(f: string): string };
