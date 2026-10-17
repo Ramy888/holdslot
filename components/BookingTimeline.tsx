@@ -42,8 +42,19 @@ function look(s: Step, holdAmount: number): { icon: IconName; tone: string; labe
       return { icon: "x", tone: "text-muted", label: "Cancelled" };
     case "expired":
       return { icon: "clock", tone: "text-muted", label: "Expired" };
+    // PayPal's webhook confirming what HoldSlot just did.
+    case "paypal_authorization_created":
+    case "paypal_authorization_voided":
+    case "paypal_capture_completed":
+    case "paypal_capture_refunded":
+      return { icon: "shield", tone: "text-released", label: "PayPal confirmed" };
+    case "hold_failed":
+      return { icon: "alert", tone: "text-held", label: "Hold declined" };
+    case "error":
+    case "paypal_capture_denied":
+      return { icon: "alert", tone: "text-charged", label: "Problem" };
     default:
-      return { icon: "alert", tone: "text-held", label: s.kind === "hold_failed" ? "Hold declined" : "Problem" };
+      return { icon: "check", tone: "text-muted", label: "Update" };
   }
 }
 

@@ -149,7 +149,7 @@ export function BookingChat({ businessName, starters = [] }: { businessName: str
             </p>
           ))}
           {booked && (
-            <div className={`grid w-full max-w-[85%] gap-2 justify-self-start rounded-2xl rounded-bl-md border p-4 sm:p-5 ${booked.needsApproval ? "border-held bg-held-soft" : "border-released bg-released-soft"}`}>
+            <div className={`grid w-full max-w-[85%] gap-2 justify-self-start rounded-2xl rounded-bl-md border p-4 sm:p-5 ${booked.needsApproval || booked.holdAmount > 0 ? "border-held bg-held-soft" : "border-released bg-released-soft"}`}>
               <p className="font-display text-lg font-semibold">
                 {booked.service}, {booked.when}
               </p>
@@ -157,6 +157,11 @@ export function BookingChat({ businessName, starters = [] }: { businessName: str
                 <p className="text-sm">
                   One step left: approve PayPal so the studio can hold up to <strong>{usd(booked.holdAmount)}</strong> {booked.holdWhen}. Nothing is charged, and the hold is released
                   when you arrive.
+                </p>
+              ) : booked.holdAmount > 0 ? (
+                <p className="text-sm">
+                  You&apos;re booked. Your PayPal is already approved, so the studio holds up to <strong>{usd(booked.holdAmount)}</strong> {booked.holdWhen.replace("as soon as PayPal is approved", "in a moment")}.
+                  Nothing is charged, and the hold is released when you arrive.
                 </p>
               ) : (
                 <p className="text-sm">You&apos;re booked. No deposit needed.</p>
