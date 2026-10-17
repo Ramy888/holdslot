@@ -61,7 +61,7 @@ export function BookingChat({ businessName, starters = [] }: { businessName: str
   useEffect(() => {
     const list = listRef.current;
     if (list) list.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
-  }, [messages, busy]);
+  }, [messages, busy, booked]);
 
   async function send(text: string) {
     const content = text.trim();
@@ -148,6 +148,24 @@ export function BookingChat({ businessName, starters = [] }: { businessName: str
               {m.content}
             </p>
           ))}
+          {booked && (
+            <div className={`grid w-full max-w-[85%] gap-2 justify-self-start rounded-2xl rounded-bl-md border p-4 sm:p-5 ${booked.needsApproval ? "border-held bg-held-soft" : "border-released bg-released-soft"}`}>
+              <p className="font-display text-lg font-semibold">
+                {booked.service}, {booked.when}
+              </p>
+              {booked.needsApproval ? (
+                <p className="text-sm">
+                  One step left: approve PayPal so the studio can hold up to <strong>{usd(booked.holdAmount)}</strong> {booked.holdWhen}. Nothing is charged, and the hold is released
+                  when you arrive.
+                </p>
+              ) : (
+                <p className="text-sm">You&apos;re booked. No deposit needed.</p>
+              )}
+              <Link href={`/b/${booked.publicId}`} className="btn btn-primary justify-self-start">
+                {booked.needsApproval ? "Approve with PayPal" : "See my booking"}
+              </Link>
+            </div>
+          )}
           {busy && (
             <p className="flex items-center gap-2 justify-self-start rounded-2xl rounded-bl-md border border-line bg-card px-4 py-2.5 text-sm text-muted">
               <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-plum" />
@@ -205,8 +223,9 @@ export function BookingChat({ businessName, starters = [] }: { businessName: str
                 >
                   {listening ? "Listening…" : "🎙 Speak"}
                 </button>
-                <button type="button" onClick={() => setLang(lang === "en-US" ? "ar-EG" : "en-US")} className="btn btn-secondary min-h-11 px-3" aria-label="Voice language">
-                  {lang === "en-US" ? "EN" : "عربي"}
+                <button type="button" onClick={() => setLang(lang === "en-US" ? "ar-EG" : "en-US")} className="btn btn-secondary min-h-11 px-3" aria-label={lang === "en-US" ? "Speak in Arabic" : "Speak in English"}>
+                  {/* Shows the language a tap switches to. */}
+                  {lang === "en-US" ? "عربي" : "EN"}
                 </button>
               </>
             )}
@@ -216,25 +235,6 @@ export function BookingChat({ businessName, starters = [] }: { businessName: str
           </div>
         </form>
       </section>
-
-      {booked && (
-        <div className={`grid gap-2 rounded-2xl border p-5 ${booked.needsApproval ? "border-held bg-held-soft" : "border-released bg-released-soft"}`}>
-          <p className="font-display text-lg font-semibold">
-            {booked.service}, {booked.when}
-          </p>
-          {booked.needsApproval ? (
-            <p className="text-sm">
-              One step left: approve PayPal so the studio can hold up to <strong>{usd(booked.holdAmount)}</strong> {booked.holdWhen}. Nothing is charged, and the hold is released
-              when you arrive.
-            </p>
-          ) : (
-            <p className="text-sm">You&apos;re booked. No deposit needed.</p>
-          )}
-          <Link href={`/b/${booked.publicId}`} className="btn btn-primary justify-self-start">
-            {booked.needsApproval ? "Approve with PayPal" : "See my booking"}
-          </Link>
-        </div>
-      )}
     </div>
   );
 }
