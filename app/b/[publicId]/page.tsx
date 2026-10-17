@@ -6,7 +6,8 @@ import { clockNow } from "@/lib/server/ops.mjs";
 import { cancellationFee } from "@/lib/policy.mjs";
 import { holdWhen } from "@/lib/lifecycle.mjs";
 import { formatSlot } from "@/lib/slots.mjs";
-import { STATUS, TONE_CLASS, usd } from "@/lib/statusCopy";
+import { STATUS, usd, type Tone } from "@/lib/statusCopy";
+import { BookingTimeline, Icon, type IconName } from "@/components/BookingTimeline";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { cancel } from "./actions";
 
@@ -22,9 +23,16 @@ const PROBLEMS: Record<string, string> = {
   BUSY: "Too many attempts. Try again later.",
   PAYPAL_UNAVAILABLE: "PayPal didn't answer. Nothing was charged; please try again.",
 };
-const DONE: Record<string, string> = {
-  approved: "PayPal approved. Nothing is charged now.",
-  cancelled: "Your booking is cancelled.",
+const TONE_TEXT: Record<Tone, string> = { held: "text-held", released: "text-released", charged: "text-charged", neutral: "text-plum", warn: "text-held" };
+const STATUS_ICON: Record<string, IconName> = {
+  awaiting_approval: "shield",
+  booked: "calendar",
+  held: "pause",
+  released: "check",
+  charged: "coin",
+  cancelled: "x",
+  no_show: "x",
+  hold_failed: "alert",
 };
 
 export default async function BookingPage({ params, searchParams }: PageProps<"/b/[publicId]">) {
@@ -48,7 +56,18 @@ export default async function BookingPage({ params, searchParams }: PageProps<"/
   const started = new Date(b.startAt).getTime() <= now.getTime();
   const feeFromHold = cancelFee && cancelFee.late && b.status === "held" ? Math.min(cancelFee.fee, b.holdAmount) : 0;
   const problem = PROBLEMS[String(sp.problem ?? "")];
-  const done = DONE[String(sp.done ?? "")];
+  const when = holdWhen(settings.rules, b.startAt, now);
+  const statusLine =
+    {
+      awaiting_approval: `Approve PayPal once to confirm. Up to ${usd(b.holdAmount)} is held ${when}; nothing is charged unless you miss it.`,
+      booked: b.holdAmount > 0 ? `${usd(b.holdAmount)} will be held ${when.replace("as soon as PayPal is approved", "in a moment")}. Nothing is charged.` : "No deposit needed. See you then.",
+      held: `${usd(b.holdAmount)} is on hold, not charged. Released when you check in.`,
+      released: b.holdAmount > 0 ? "Hold released. Nothing was charged." : "Thanks for coming in.",
+      charged: `${usd(b.chargedAmount)} charged under the studio's policy. The rest was released.`,
+      cancelled: "Nothing more to do.",
+      no_show: "Marked as missed. Nothing was held, so nothing was charged.",
+      hold_failed: "PayPal declined the hold. The studio may contact you.",
+    }[b.status] ?? "";
 
   return (
     <>
@@ -63,33 +82,32 @@ export default async function BookingPage({ params, searchParams }: PageProps<"/
           </p>
         </header>
 
-        {(done || problem || sp.cancelled) && (
-          <p role="status" className={`rounded-xl border px-4 py-3 text-sm ${problem ? TONE_CLASS.charged : TONE_CLASS.released}`}>
-            {problem ?? done ?? "You left PayPal before approving. Your slot is kept until the appointment time; approve to confirm it."}
-          </p>
-        )}
+        <BookingTimeline steps={activity} holdAmount={b.holdAmount} timeZone={settings.timeZone} next={open ? { label: "Appointment", at: new Date(b.startAt) } : undefined} />
 
-        <section className={`grid gap-2 rounded-2xl border p-5 ${TONE_CLASS[status.tone]}`}>
-          <p className="font-semibold">{status.label}</p>
-          {b.status === "awaiting_approval" && (
-            <>
-              <p className="text-sm text-ink">
-                This booking needs a deposit hold of up to <strong>{usd(b.holdAmount)}</strong>. Approve PayPal once: nothing is charged now. PayPal holds the amount{" "}
-                {holdWhen(settings.rules, b.startAt, now)}; it&apos;s released when you arrive, and charged only if you miss the appointment.
-              </p>
-              <form action="/approve/start" method="post">
-                <input type="hidden" name="booking" value={b.publicId} />
-                <button className="btn mt-1 w-full bg-[#ffc439] text-[#111] hover:bg-[#f2b72c] sm:w-auto sm:px-8">Approve with PayPal</button>
-              </form>
-            </>
-          )}
-          {b.status === "booked" && b.holdAmount > 0 && (
-            <p className="text-sm text-ink">
-              PayPal approved. {usd(b.holdAmount)} will be held (not charged) {holdWhen(settings.rules, b.startAt, now).replace("as soon as PayPal is approved", "in a moment")}.
+        <section className="card grid gap-3 p-5">
+          <div className="flex items-start gap-3">
+            <span className={`mt-0.5 shrink-0 ${TONE_TEXT[status.tone]}`}>
+              <Icon name={STATUS_ICON[b.status] ?? "calendar"} size={22} />
+            </span>
+            <div className="grid gap-0.5">
+              <p className="font-semibold">{status.label}</p>
+              <p className="text-sm text-muted">{statusLine}</p>
+            </div>
+          </div>
+          {(problem || sp.cancelled) && (
+            <p role="status" className="flex items-start gap-2 border-t border-line pt-3 text-sm">
+              <span className={problem ? "text-charged" : "text-held"}>
+                <Icon name="alert" size={16} />
+              </span>
+              {problem ?? "You left PayPal before approving. Your slot is kept until the appointment time; approve to confirm it."}
             </p>
           )}
-          {b.status === "held" && <p className="text-sm text-ink">{usd(b.holdAmount)} is on hold on your PayPal. It is released the moment you check in.</p>}
-          {b.status === "charged" && <p className="text-sm text-ink">{usd(b.chargedAmount)} was charged under the studio&apos;s policy. The rest of any hold was released.</p>}
+          {b.status === "awaiting_approval" && (
+            <form action="/approve/start" method="post">
+              <input type="hidden" name="booking" value={b.publicId} />
+              <button className="btn w-full bg-[#ffc439] text-[#111] hover:bg-[#f2b72c] sm:w-auto sm:px-8">Approve with PayPal</button>
+            </form>
+          )}
         </section>
 
         {open && cancelFee && !started && (
@@ -109,18 +127,6 @@ export default async function BookingPage({ params, searchParams }: PageProps<"/
           </section>
         )}
 
-        <section className="grid gap-2">
-          <h2 className="eyebrow">What happened</h2>
-          <ol className="card grid gap-4 p-5">
-            {activity.map((a, i) => (
-              <li key={i} className="relative grid border-l-2 border-line pl-4 text-sm">
-                <span aria-hidden className="absolute top-1 -left-[5px] h-2 w-2 rounded-full bg-plum" />
-                <span className="text-xs text-muted">{formatSlot(a.at, settings.timeZone)}</span>
-                {a.message}
-              </li>
-            ))}
-          </ol>
-        </section>
         <p className="text-xs text-muted">Policy: {settings.rules.summary}</p>
       </main>
       <SiteFooter />
