@@ -50,3 +50,18 @@ test("markdown emphasis is stripped from replies", async () => {
   const out = await receptionistTurn({ anthropic, system: "s", history: [{ role: "user", content: "hi" }], tools: {} });
   assert.equal(out.reply, "Booked for 5:00 PM with Leo.");
 });
+
+test("a trailing Choices line becomes tap-to-send options and leaves the reply", async () => {
+  const anthropic = fakeAnthropic([text("Leo has these times on Friday.\nChoices: Fri 5:00 PM | Fri 5:30 PM |  | Fri 5:00 PM | Another day")]);
+  const out = await receptionistTurn({ anthropic, system: "s", history: [{ role: "user", content: "haircut friday" }], tools: {} });
+  assert.equal(out.reply, "Leo has these times on Friday.");
+  assert.deepEqual(out.choices, ["Fri 5:00 PM", "Fri 5:30 PM", "Another day"], "blank and duplicate options dropped");
+});
+
+test("no Choices line, or a malformed one, means no options", async () => {
+  const one = await receptionistTurn({ anthropic: fakeAnthropic([text("What's your name and email?")]), system: "s", history: [{ role: "user", content: "5pm" }], tools: {} });
+  assert.deepEqual(one.choices, []);
+  const long = await receptionistTurn({ anthropic: fakeAnthropic([text(`Pick one.\nChoices: ${"x".repeat(80)}`)]), system: "s", history: [{ role: "user", content: "hi" }], tools: {} });
+  assert.equal(long.reply, "Pick one.");
+  assert.deepEqual(long.choices, [], "over-long options are not shown as chips");
+});

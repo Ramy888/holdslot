@@ -17,7 +17,7 @@ export default async function BookPage() {
           <p className="eyebrow text-plum">Book online</p>
           <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">{settings.businessName}</h1>
         </header>
-        <BookingChat businessName={settings.businessName} />
+        <BookingChat businessName={settings.businessName} starters={services.map((s) => s.name)} />
         <aside className="grid gap-4 lg:sticky lg:top-24">
           <section className="card grid gap-3 p-5">
             <h2 className="eyebrow">Services</h2>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { LogoMark } from "./Logo";
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Msg = { role: "user" | "assistant"; content: string; choices?: string[] };
 type Booked = {
   publicId: string;
   when: string;
@@ -29,11 +29,12 @@ type RecognitionCtor = new () => Recognition;
 
 const usd = (n: number) => `$${n.toFixed(2).replace(/\.00$/, "")}`;
 
-export function BookingChat({ businessName }: { businessName: string }) {
+export function BookingChat({ businessName, starters = [] }: { businessName: string; starters?: string[] }) {
   const [messages, setMessages] = useState<Msg[]>([
     {
       role: "assistant",
       content: `Hi! I'm the front desk at ${businessName}. What would you like to book, and when?`,
+      choices: starters,
     },
   ]);
   const [input, setInput] = useState("");
@@ -72,11 +73,9 @@ export function BookingChat({ businessName }: { businessName: string }) {
     setError(null);
     let res: Response;
     try {
-      res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ history: next }),
-      });
+      // Only the words go back to the server; the chips were for this page.
+      const history = next.map(({ role, content }) => ({ role, content }));
+      res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ history }) });
     } catch {
       // The connection dropped before any answer. Not retried automatically: the first try may
       // have booked. Give the message back so one tap resends it.
@@ -89,7 +88,7 @@ export function BookingChat({ businessName }: { businessName: string }) {
     try {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Something went wrong.");
-      setMessages([...next, { role: "assistant", content: json.reply }]);
+      setMessages([...next, { role: "assistant", content: json.reply, choices: Array.isArray(json.choices) ? json.choices : [] }]);
       if (json.booking) setBooked(json.booking);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -121,6 +120,10 @@ export function BookingChat({ businessName }: { businessName: string }) {
     setListening(true);
     r.start();
   }
+
+  // Quick replies belong to the latest receptionist message only; anything typed or tapped replaces them.
+  const last = messages.at(-1);
+  const chips = last?.role === "assistant" && !booked && !busy ? (last.choices ?? []) : [];
 
   return (
     <div className="grid min-w-0 gap-4">
@@ -159,12 +162,28 @@ export function BookingChat({ businessName }: { businessName: string }) {
           </p>
         )}
 
+        {chips.length > 0 && (
+          <div aria-label="Quick replies" className="flex gap-2 overflow-x-auto border-t border-line px-3 pt-3 [scrollbar-width:none] [mask-image:linear-gradient(to_right,black_88%,transparent)]">
+            {chips.map((c) => (
+              <button
+                key={c}
+                type="button"
+                dir="auto"
+                onClick={() => send(c)}
+                className="shrink-0 rounded-full border border-plum/30 bg-plum-soft px-3.5 py-2 text-sm font-medium whitespace-nowrap text-plum transition-colors hover:border-plum hover:bg-plum hover:text-white"
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
+
         <form
           onSubmit={(e) => {
             e.preventDefault();
             send(input);
           }}
-          className="flex flex-wrap items-center gap-2 border-t border-line p-3"
+          className={`flex flex-wrap items-center gap-2 p-3 ${chips.length > 0 ? "" : "border-t border-line"}`}
         >
           <input
             value={input}

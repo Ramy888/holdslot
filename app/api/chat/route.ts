@@ -19,9 +19,10 @@ export async function POST(req: Request) {
     return Response.json({ error: "Bad request." }, { status: 400 });
   }
   try {
-    const { reply, booking } = await chat(history);
+    const { reply, choices, booking } = await chat(history);
     return Response.json({
       reply,
+      choices,
       booking: booking && { publicId: booking.publicId, when: booking.startLabel, service: booking.service.name, needsApproval: booking.needsApproval, holdAmount: booking.holdAmount, holdWhen: booking.holdWhen, riskTier: booking.risk.tier },
     });
   } catch (err) {
