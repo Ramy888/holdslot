@@ -20,9 +20,9 @@ function RulesTable({ rules }: { rules: Rules }) {
     ["Grace period", `${rules.grace_minutes} minutes`],
   ];
   return (
-    <dl className="grid gap-px overflow-hidden rounded-xl border border-line bg-line text-sm">
+    <dl className="card grid gap-px overflow-hidden bg-line text-sm">
       {rows.map(([k, v]) => (
-        <div key={k} className="grid grid-cols-[1fr_1.3fr] gap-3 bg-card px-4 py-2.5">
+        <div key={k} className="grid gap-0.5 bg-card px-4 py-3 sm:grid-cols-[1fr_1.3fr] sm:gap-3">
           <dt className="text-muted">{k}</dt>
           <dd className="font-medium">{v}</dd>
         </div>
@@ -37,15 +37,23 @@ export function PolicyEditor({ policyText, rules }: { policyText: string; rules:
   return (
     <div className="grid gap-6">
       <section className="grid gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">Rules in force</h2>
+        <h2 className="eyebrow">Rules in force</h2>
         <RulesTable rules={rules} />
       </section>
       <form action={action} className="grid gap-2">
-        <label htmlFor="policy" className="text-sm font-semibold uppercase tracking-wider text-muted">
+        <label htmlFor="policy" className="eyebrow">
           Your policy, in your words
         </label>
-        <textarea id="policy" name="policy" defaultValue={text} rows={6} maxLength={3000} dir="auto" className="rounded-xl border border-line bg-card p-3 text-[15px] leading-relaxed" />
-        <button disabled={pending} className="justify-self-start rounded-lg bg-plum px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+        <textarea
+          id="policy"
+          name="policy"
+          defaultValue={text}
+          rows={8}
+          maxLength={3000}
+          dir="auto"
+          className="card p-4 text-[15px] leading-relaxed shadow-none focus:border-plum focus:outline-none"
+        />
+        <button disabled={pending} className="btn btn-primary justify-self-start">
           {pending ? "Reading…" : "Read my policy"}
         </button>
         {state.error && (
@@ -55,7 +63,7 @@ export function PolicyEditor({ policyText, rules }: { policyText: string; rules:
         )}
       </form>
       {state.rules && (
-        <form action={savePolicy} className="grid gap-3 rounded-2xl border border-held bg-held-soft p-4">
+        <form action={savePolicy} className="grid gap-3 rounded-2xl border border-held bg-held-soft p-4 sm:p-5">
           <p className="font-semibold">Here&apos;s how HoldSlot read it. Check it before saving.</p>
           <RulesTable rules={state.rules} />
           <p className="text-sm">Clients will see: “{state.rules.summary}”</p>
@@ -68,7 +76,7 @@ export function PolicyEditor({ policyText, rules }: { policyText: string; rules:
           )}
           <input type="hidden" name="rules" value={JSON.stringify(state.rules)} />
           <input type="hidden" name="policy" value={text} />
-          <button className="justify-self-start rounded-lg bg-plum px-4 py-2.5 text-sm font-semibold text-white">Use these rules</button>
+          <button className="btn btn-primary justify-self-start">Use these rules</button>
         </form>
       )}
     </div>

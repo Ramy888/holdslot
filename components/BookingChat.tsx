@@ -2,18 +2,40 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { LogoMark } from "./Logo";
 
 type Msg = { role: "user" | "assistant"; content: string };
-type Booked = { publicId: string; when: string; service: string; needsApproval: boolean; holdAmount: number; holdWhen: string; riskTier: string };
+type Booked = {
+  publicId: string;
+  when: string;
+  service: string;
+  needsApproval: boolean;
+  holdAmount: number;
+  holdWhen: string;
+  riskTier: string;
+};
 
 // Minimal typing for the browser's speech recognition (Chrome/Safari prefix it).
-type Recognition = { lang: string; interimResults: boolean; start(): void; stop(): void; onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null };
+type Recognition = {
+  lang: string;
+  interimResults: boolean;
+  start(): void;
+  stop(): void;
+  onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+};
 type RecognitionCtor = new () => Recognition;
 
 const usd = (n: number) => `$${n.toFixed(2).replace(/\.00$/, "")}`;
 
 export function BookingChat({ businessName }: { businessName: string }) {
-  const [messages, setMessages] = useState<Msg[]>([{ role: "assistant", content: `Hi! I'm the front desk at ${businessName}. What would you like to book, and when?` }]);
+  const [messages, setMessages] = useState<Msg[]>([
+    {
+      role: "assistant",
+      content: `Hi! I'm the front desk at ${businessName}. What would you like to book, and when?`,
+    },
+  ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,18 +44,22 @@ export function BookingChat({ businessName }: { businessName: string }) {
   const [listening, setListening] = useState(false);
   const [canListen, setCanListen] = useState(false);
   const rec = useRef<Recognition | null>(null);
-  const end = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const w = window as unknown as { SpeechRecognition?: RecognitionCtor; webkitSpeechRecognition?: RecognitionCtor };
+    const w = window as unknown as {
+      SpeechRecognition?: RecognitionCtor;
+      webkitSpeechRecognition?: RecognitionCtor;
+    };
     // Feature detection has to run in the browser, after hydration.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCanListen(Boolean(w.SpeechRecognition ?? w.webkitSpeechRecognition));
   }, []);
-  // Braces matter: newer Chrome returns a Promise from scrollIntoView, and React would try
-  // to call an effect's return value as its cleanup.
+  // Scroll the message list only, never the page (scrollIntoView would jump the page on phones).
+  // Braces matter: an effect must not return a value React would call as its cleanup.
   useEffect(() => {
-    end.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const list = listRef.current;
+    if (list) list.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
   }, [messages, busy]);
 
   async function send(text: string) {
@@ -46,7 +72,11 @@ export function BookingChat({ businessName }: { businessName: string }) {
     setError(null);
     let res: Response;
     try {
-      res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ history: next }) });
+      res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ history: next }),
+      });
     } catch {
       // The connection dropped before any answer. Not retried automatically: the first try may
       // have booked. Give the message back so one tap resends it.
@@ -70,13 +100,21 @@ export function BookingChat({ businessName }: { businessName: string }) {
 
   function toggleMic() {
     if (listening) return rec.current?.stop();
-    const w = window as unknown as { SpeechRecognition?: RecognitionCtor; webkitSpeechRecognition?: RecognitionCtor };
+    const w = window as unknown as {
+      SpeechRecognition?: RecognitionCtor;
+      webkitSpeechRecognition?: RecognitionCtor;
+    };
     const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     if (!Ctor) return;
     const r = new Ctor();
     r.lang = lang;
     r.interimResults = false;
-    r.onresult = (e) => send(Array.from(e.results).map((x) => x[0].transcript).join(" "));
+    r.onresult = (e) =>
+      send(
+        Array.from(e.results)
+          .map((x) => x[0].transcript)
+          .join(" "),
+      );
     r.onend = () => setListening(false);
     r.onerror = () => setListening(false);
     rec.current = r;
@@ -85,75 +123,99 @@ export function BookingChat({ businessName }: { businessName: string }) {
   }
 
   return (
-    <div className="grid gap-4">
-      <div className="grid max-h-[60vh] min-h-[320px] content-start gap-3 overflow-y-auto rounded-2xl border border-line bg-card p-4" aria-live="polite">
-        {messages.map((m, i) => (
-          <p
-            key={i}
-            dir="auto"
-            className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed ${m.role === "user" ? "justify-self-end bg-plum text-white" : "justify-self-start bg-paper"}`}
-          >
-            {m.content}
+    <div className="grid min-w-0 gap-4">
+      <section className="card flex flex-col overflow-hidden" aria-label="Booking chat">
+        <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+          <LogoMark size={36} />
+          <div className="min-w-0">
+            <p className="truncate font-semibold">{businessName} front desk</p>
+            <p className="flex items-center gap-1.5 text-xs text-muted">
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-released" /> AI receptionist · books real free times only
+            </p>
+          </div>
+        </div>
+
+        <div ref={listRef} className="grid h-[min(56vh,520px)] min-h-[300px] content-start gap-3 overflow-y-auto bg-paper/60 p-4" aria-live="polite">
+          {messages.map((m, i) => (
+            <p
+              key={i}
+              dir="auto"
+              className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed ${m.role === "user" ? "justify-self-end rounded-br-md bg-plum text-white" : "justify-self-start rounded-bl-md border border-line bg-card"}`}
+            >
+              {m.content}
+            </p>
+          ))}
+          {busy && (
+            <p className="flex items-center gap-2 justify-self-start rounded-2xl rounded-bl-md border border-line bg-card px-4 py-2.5 text-sm text-muted">
+              <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-plum" />
+              Checking the calendar…
+            </p>
+          )}
+        </div>
+
+        {error && (
+          <p role="alert" className="border-t border-charged/30 bg-charged-soft px-4 py-2.5 text-sm text-charged">
+            {error}
           </p>
-        ))}
-        {busy && <p className="justify-self-start rounded-2xl bg-paper px-4 py-2.5 text-sm text-muted">Checking the calendar…</p>}
-        <div ref={end} />
-      </div>
+        )}
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            send(input);
+          }}
+          className="flex flex-wrap items-center gap-2 border-t border-line p-3"
+        >
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            dir="auto"
+            placeholder={lang === "ar-EG" ? "اكتب هنا…" : "A haircut on Friday after 5?"}
+            aria-label="Message"
+            className="min-h-11 min-w-0 flex-1 basis-48 rounded-xl border border-line bg-paper px-4 py-2.5 focus:border-plum focus:outline-none"
+            maxLength={2000}
+          />
+          <div className="flex gap-2">
+            {canListen && (
+              <>
+                <button
+                  type="button"
+                  onClick={toggleMic}
+                  aria-pressed={listening}
+                  className={`btn min-h-11 border px-3 ${listening ? "border-charged bg-charged-soft text-charged" : "btn-secondary"}`}
+                >
+                  {listening ? "Listening…" : "🎙 Speak"}
+                </button>
+                <button type="button" onClick={() => setLang(lang === "en-US" ? "ar-EG" : "en-US")} className="btn btn-secondary min-h-11 px-3" aria-label="Voice language">
+                  {lang === "en-US" ? "EN" : "عربي"}
+                </button>
+              </>
+            )}
+            <button disabled={busy || !input.trim()} className="btn btn-primary min-h-11 px-5">
+              Send
+            </button>
+          </div>
+        </form>
+      </section>
 
       {booked && (
-        <div className={`grid gap-2 rounded-2xl border p-4 ${booked.needsApproval ? "border-held bg-held-soft" : "border-released bg-released-soft"}`}>
+        <div className={`grid gap-2 rounded-2xl border p-5 ${booked.needsApproval ? "border-held bg-held-soft" : "border-released bg-released-soft"}`}>
           <p className="font-display text-lg font-semibold">
             {booked.service}, {booked.when}
           </p>
           {booked.needsApproval ? (
             <p className="text-sm">
-              One step left: approve PayPal so the studio can hold up to <strong>{usd(booked.holdAmount)}</strong> {booked.holdWhen}. Nothing is charged, and the hold is released when you arrive.
+              One step left: approve PayPal so the studio can hold up to <strong>{usd(booked.holdAmount)}</strong> {booked.holdWhen}. Nothing is charged, and the hold is released
+              when you arrive.
             </p>
           ) : (
             <p className="text-sm">You&apos;re booked. No deposit needed.</p>
           )}
-          <Link href={`/b/${booked.publicId}`} className="justify-self-start rounded-lg bg-plum px-4 py-2 text-sm font-semibold text-white">
+          <Link href={`/b/${booked.publicId}`} className="btn btn-primary justify-self-start">
             {booked.needsApproval ? "Approve with PayPal" : "See my booking"}
           </Link>
         </div>
       )}
-
-      {error && (
-        <p role="alert" className="text-sm text-charged">
-          {error}
-        </p>
-      )}
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          send(input);
-        }}
-        className="flex flex-wrap items-center gap-2"
-      >
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          dir="auto"
-          placeholder={lang === "ar-EG" ? "اكتب هنا…" : "A haircut on Friday after 5?"}
-          aria-label="Message"
-          className="min-w-0 flex-1 rounded-xl border border-line bg-card px-4 py-3"
-          maxLength={2000}
-        />
-        {canListen && (
-          <>
-            <button type="button" onClick={toggleMic} aria-pressed={listening} className={`rounded-xl border px-3 py-3 text-sm font-medium ${listening ? "border-charged bg-charged-soft text-charged" : "border-line bg-card"}`}>
-              {listening ? "Listening…" : "🎙 Speak"}
-            </button>
-            <button type="button" onClick={() => setLang(lang === "en-US" ? "ar-EG" : "en-US")} className="rounded-xl border border-line bg-card px-3 py-3 text-sm" aria-label="Voice language">
-              {lang === "en-US" ? "EN" : "عربي"}
-            </button>
-          </>
-        )}
-        <button disabled={busy || !input.trim()} className="rounded-xl bg-plum px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">
-          Send
-        </button>
-      </form>
     </div>
   );
 }

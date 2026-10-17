@@ -7,13 +7,18 @@ import { cancellationFee } from "@/lib/policy.mjs";
 import { holdWhen } from "@/lib/lifecycle.mjs";
 import { formatSlot } from "@/lib/slots.mjs";
 import { STATUS, TONE_CLASS, usd } from "@/lib/statusCopy";
+import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { cancel } from "./actions";
 
-export const metadata: Metadata = { title: "Your booking · HoldSlot", robots: { index: false } };
+export const metadata: Metadata = {
+  title: "Your booking · HoldSlot",
+  robots: { index: false },
+};
 
 const PROBLEMS: Record<string, string> = {
   NOT_PENDING: "This booking doesn't need a PayPal approval any more.",
   NOT_OPEN: "This booking is already closed.",
+  STARTED: "Your appointment has already started, so it can't be cancelled online. Please talk to the studio.",
   BUSY: "Too many attempts. Try again later.",
   PAYPAL_UNAVAILABLE: "PayPal didn't answer. Nothing was charged; please try again.",
 };
@@ -33,78 +38,92 @@ export default async function BookingPage({ params, searchParams }: PageProps<"/
   const activity = await bookingActivity(b.id);
   const status = STATUS[b.status] ?? STATUS.booked;
   const open = ["awaiting_approval", "booked", "held", "hold_failed"].includes(b.status);
-  const cancelFee = open ? cancellationFee(settings.rules, { price: b.price, startAt: b.startAt, now }) : null;
+  const cancelFee = open
+    ? cancellationFee(settings.rules, {
+        price: b.price,
+        startAt: b.startAt,
+        now,
+      })
+    : null;
+  const started = new Date(b.startAt).getTime() <= now.getTime();
   const feeFromHold = cancelFee && cancelFee.late && b.status === "held" ? Math.min(cancelFee.fee, b.holdAmount) : 0;
   const problem = PROBLEMS[String(sp.problem ?? "")];
   const done = DONE[String(sp.done ?? "")];
 
   return (
-    <main className="mx-auto grid w-full max-w-xl gap-6 px-4 py-10">
-      <header className="grid gap-1">
-        <p className="text-sm font-medium uppercase tracking-wider text-plum">{settings.businessName}</p>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">{b.serviceName}</h1>
-        <p className="text-lg">{formatSlot(b.startAt, settings.timeZone)}</p>
-        <p className="text-sm text-muted">For {b.clientName} · {usd(b.price)}, paid at the studio</p>
-      </header>
-
-      {(done || problem || sp.cancelled) && (
-        <p role="status" className={`rounded-xl border px-4 py-3 text-sm ${problem ? TONE_CLASS.charged : TONE_CLASS.released}`}>
-          {problem ?? done ?? "You left PayPal before approving. Your slot is kept until the appointment time; approve to confirm it."}
-        </p>
-      )}
-
-      <section className={`grid gap-2 rounded-2xl border p-5 ${TONE_CLASS[status.tone]}`}>
-        <p className="font-semibold">{status.label}</p>
-        {b.status === "awaiting_approval" && (
-          <>
-            <p className="text-sm text-ink">
-              This booking needs a deposit hold of up to <strong>{usd(b.holdAmount)}</strong>. Approve PayPal once: nothing is charged now. PayPal holds the amount{" "}
-              {holdWhen(settings.rules, b.startAt, now)}; it&apos;s released when you arrive, and charged only if you miss the appointment.
-            </p>
-            <form action="/approve/start" method="post">
-              <input type="hidden" name="booking" value={b.publicId} />
-              <button className="mt-1 rounded-lg bg-[#ffc439] px-5 py-2.5 text-sm font-semibold text-[#111]">Approve with PayPal</button>
-            </form>
-          </>
-        )}
-        {b.status === "booked" && b.holdAmount > 0 && (
-          <p className="text-sm text-ink">
-            PayPal approved. {usd(b.holdAmount)} will be held (not charged) {holdWhen(settings.rules, b.startAt, now).replace("as soon as PayPal is approved", "in a moment")}.
-          </p>
-        )}
-        {b.status === "held" && <p className="text-sm text-ink">{usd(b.holdAmount)} is on hold on your PayPal. It is released the moment you check in.</p>}
-        {b.status === "charged" && <p className="text-sm text-ink">{usd(b.chargedAmount)} was charged under the studio&apos;s policy. The rest of any hold was released.</p>}
-      </section>
-
-      {open && cancelFee && (
-        <section className="grid gap-2 rounded-2xl border border-line bg-card p-5">
-          <h2 className="font-semibold">Can&apos;t make it?</h2>
+    <>
+      <SiteHeader nav={<span className="text-sm text-muted">Your booking</span>} />
+      <main className="mx-auto grid w-full max-w-xl gap-5 px-4 py-8 sm:py-12">
+        <header className="card grid gap-1 p-5 sm:p-6">
+          <p className="eyebrow text-plum">{settings.businessName}</p>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">{b.serviceName}</h1>
+          <p className="text-lg font-medium">{formatSlot(b.startAt, settings.timeZone)}</p>
           <p className="text-sm text-muted">
-            {!cancelFee.late
-              ? `Cancelling now is free (more than ${settings.rules.late_cancel_window_hours} hours before).`
-              : feeFromHold > 0
-                ? `It's ${cancelFee.hoursBefore} hours before, inside the ${settings.rules.late_cancel_window_hours}-hour window: cancelling now costs ${usd(feeFromHold)}, taken from the hold. The rest is released.`
-                : `It's inside the ${settings.rules.late_cancel_window_hours}-hour window, but there's no hold on this booking, so cancelling costs nothing.`}
+            For {b.clientName} · {usd(b.price)}, paid at the studio
           </p>
-          <form action={cancel}>
-            <input type="hidden" name="booking" value={b.publicId} />
-            <button className="rounded-lg border border-line px-4 py-2 text-sm font-semibold">{feeFromHold > 0 ? `Cancel and pay ${usd(feeFromHold)}` : "Cancel booking"}</button>
-          </form>
-        </section>
-      )}
+        </header>
 
-      <section className="grid gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">What happened</h2>
-        <ol className="grid gap-2">
-          {activity.map((a, i) => (
-            <li key={i} className="rounded-xl border border-line bg-card px-4 py-3 text-sm">
-              <span className="block text-xs text-muted">{formatSlot(a.at, settings.timeZone)}</span>
-              {a.message}
-            </li>
-          ))}
-        </ol>
-      </section>
-      <p className="text-xs text-muted">Policy: {settings.rules.summary}</p>
-    </main>
+        {(done || problem || sp.cancelled) && (
+          <p role="status" className={`rounded-xl border px-4 py-3 text-sm ${problem ? TONE_CLASS.charged : TONE_CLASS.released}`}>
+            {problem ?? done ?? "You left PayPal before approving. Your slot is kept until the appointment time; approve to confirm it."}
+          </p>
+        )}
+
+        <section className={`grid gap-2 rounded-2xl border p-5 ${TONE_CLASS[status.tone]}`}>
+          <p className="font-semibold">{status.label}</p>
+          {b.status === "awaiting_approval" && (
+            <>
+              <p className="text-sm text-ink">
+                This booking needs a deposit hold of up to <strong>{usd(b.holdAmount)}</strong>. Approve PayPal once: nothing is charged now. PayPal holds the amount{" "}
+                {holdWhen(settings.rules, b.startAt, now)}; it&apos;s released when you arrive, and charged only if you miss the appointment.
+              </p>
+              <form action="/approve/start" method="post">
+                <input type="hidden" name="booking" value={b.publicId} />
+                <button className="btn mt-1 w-full bg-[#ffc439] text-[#111] hover:bg-[#f2b72c] sm:w-auto sm:px-8">Approve with PayPal</button>
+              </form>
+            </>
+          )}
+          {b.status === "booked" && b.holdAmount > 0 && (
+            <p className="text-sm text-ink">
+              PayPal approved. {usd(b.holdAmount)} will be held (not charged) {holdWhen(settings.rules, b.startAt, now).replace("as soon as PayPal is approved", "in a moment")}.
+            </p>
+          )}
+          {b.status === "held" && <p className="text-sm text-ink">{usd(b.holdAmount)} is on hold on your PayPal. It is released the moment you check in.</p>}
+          {b.status === "charged" && <p className="text-sm text-ink">{usd(b.chargedAmount)} was charged under the studio&apos;s policy. The rest of any hold was released.</p>}
+        </section>
+
+        {open && cancelFee && !started && (
+          <section className="card grid gap-3 p-5">
+            <h2 className="font-semibold">Can&apos;t make it?</h2>
+            <p className="text-sm text-muted">
+              {!cancelFee.late
+                ? `Cancelling now is free (more than ${settings.rules.late_cancel_window_hours} hours before).`
+                : feeFromHold > 0
+                  ? `It's ${cancelFee.hoursBefore} hours before, inside the ${settings.rules.late_cancel_window_hours}-hour window: cancelling now costs ${usd(feeFromHold)}, taken from the hold. The rest is released.`
+                  : `It's inside the ${settings.rules.late_cancel_window_hours}-hour window, but there's no hold on this booking, so cancelling costs nothing.`}
+            </p>
+            <form action={cancel}>
+              <input type="hidden" name="booking" value={b.publicId} />
+              <button className="btn btn-secondary hover:border-charged hover:text-charged">{feeFromHold > 0 ? `Cancel and pay ${usd(feeFromHold)}` : "Cancel booking"}</button>
+            </form>
+          </section>
+        )}
+
+        <section className="grid gap-2">
+          <h2 className="eyebrow">What happened</h2>
+          <ol className="card grid gap-4 p-5">
+            {activity.map((a, i) => (
+              <li key={i} className="relative grid border-l-2 border-line pl-4 text-sm">
+                <span aria-hidden className="absolute top-1 -left-[5px] h-2 w-2 rounded-full bg-plum" />
+                <span className="text-xs text-muted">{formatSlot(a.at, settings.timeZone)}</span>
+                {a.message}
+              </li>
+            ))}
+          </ol>
+        </section>
+        <p className="text-xs text-muted">Policy: {settings.rules.summary}</p>
+      </main>
+      <SiteFooter />
+    </>
   );
 }

@@ -69,7 +69,7 @@ export default function Calendar({
       endDate={end}
       mode="vertical"
       viewPreset="hourAndDay"
-      resourceColumns={{ columnWidth: 220, fillWidth: true }}
+      resourceColumns={{ columnWidth: 120, fillWidth: true }}
       timeZone={timeZone}
       workingTime={{ fromHour: 9, toHour: 19, fromDay: 0, toDay: 7 }}
       tickSize={64}
@@ -94,7 +94,10 @@ export default function Calendar({
         const e = eventRecord as EventModel & { get(f: string): string };
         return `<div class="hs-ev"><b>${esc(e.name)}</b><span class="hs-badge">${esc(e.get("badge"))}</span><span>${esc(e.get("service"))}</span></div>`;
       }}
-      eventTooltipFeature={{ template: ({ eventRecord }: { eventRecord: EventModel & { get(f: string): string } }) => `${esc(eventRecord.name)} · ${esc(eventRecord.get("service"))}<br>${esc(eventRecord.get("badge"))}` }}
+      eventTooltipFeature={{
+        template: ({ eventRecord }: { eventRecord: EventModel & { get(f: string): string } }) =>
+          `${esc(eventRecord.name)} · ${esc(eventRecord.get("service"))}<br>${esc(eventRecord.get("badge"))}`,
+      }}
       onEventClick={({ eventRecord }: { eventRecord: EventModel }) => onSelect(String(eventRecord.id))}
     />
   );

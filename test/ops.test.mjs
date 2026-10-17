@@ -106,6 +106,17 @@ test("late cancel takes the late fee from the hold; early cancel is free", { ski
   assert.equal(c.chargedAmount, 0);
 });
 
+test("once the slot has started, the client can't cancel their way to a smaller fee", { skip }, async () => {
+  const paypal = fakePayPal();
+  const bk = await bookTomorrow({ email: "new@example.com", name: "New Client", hour: 12 });
+  const b0 = await store.getBooking(bk.id, db);
+  await ops.advanceClock({ paypal, hours: (new Date(b0.startAt) - ops.clockNow(await store.getSettings(db))) / 3_600_000 + 0.1 });
+  assert.equal((await store.getBooking(bk.id, db)).status, "held", "inside the grace period, not yet settled");
+  await assert.rejects(ops.cancelBooking({ paypal, publicId: bk.publicId }), (err) => err.code === "STARTED");
+  assert.equal((await store.getBooking(bk.id, db)).status, "held");
+  assert.ok(!paypal.calls.some((c) => c.path.endsWith("/capture")), "nothing captured");
+});
+
 test("a slot can't be double-booked", { skip }, async () => {
   const settings = await store.getSettings(db);
   const day = new Date(ops.clockNow(settings).getTime() + 6 * 86_400_000).toISOString().slice(0, 10);

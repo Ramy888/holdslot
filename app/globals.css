@@ -9,6 +9,9 @@
   --muted: #6e5f6f;
   --line: #eadfd4;
   --plum: #5b2a63;
+  --plum-deep: #3d1a44;
+  --plum-soft: #f1e6f2;
+  --clasp: #f2a93b;
   --held: #b45309;
   --held-soft: #fdf0dc;
   --released: #0f766e;
@@ -25,6 +28,9 @@
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-plum: var(--plum);
+  --color-plum-deep: var(--plum-deep);
+  --color-plum-soft: var(--plum-soft);
+  --color-clasp: var(--clasp);
   --color-held: var(--held);
   --color-held-soft: var(--held-soft);
   --color-released: var(--released);
@@ -41,6 +47,54 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+/* Shared building blocks, so every screen has the same buttons, cards and labels. */
+@utility card {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgb(42 23 48 / 0.04), 0 8px 24px -16px rgb(42 23 48 / 0.18);
+}
+@utility btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1.125rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background-color 150ms, border-color 150ms, transform 150ms;
+  &:disabled {
+    opacity: 0.5;
+  }
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+}
+@utility btn-primary {
+  background: var(--plum);
+  color: #fff;
+  &:hover:not(:disabled) {
+    background: var(--plum-deep);
+  }
+}
+@utility btn-secondary {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  &:hover:not(:disabled) {
+    border-color: var(--plum);
+  }
+}
+@utility eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 :focus-visible {
   outline: 2px solid var(--plum);
   outline-offset: 2px;
@@ -48,11 +102,18 @@ body {
 
 /* Calendar bars (Bryntum). */
 .hs-ev {
-  display: grid;
-  gap: 1px;
-  line-height: 1.2;
+  display: flex;
+  flex-direction: column;
+  align-self: flex-start;
+  gap: 2px;
+  line-height: 1.25;
   font-size: 12px;
   overflow: hidden;
+  min-width: 0;
+}
+.hs-ev > * {
+  display: block;
+  line-height: 1.25;
 }
 .hs-ev span {
   white-space: nowrap;
