@@ -7,7 +7,7 @@ import { allow } from "@/lib/server/rateLimit";
 
 export async function cancel(form: FormData) {
   const publicId = String(form.get("booking") ?? "");
-  if (!allow(`cancel:${publicId}`, 5, 60 * 60_000)) redirect(`/b/${publicId}?problem=BUSY`);
+  if (!(await allow(`cancel:${publicId}`, 5, 60 * 60_000))) redirect(`/b/${publicId}?problem=BUSY`);
   try {
     await cancelBooking({ paypal: paypal(), publicId });
   } catch (err) {

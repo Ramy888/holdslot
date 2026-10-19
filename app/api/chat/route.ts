@@ -1,13 +1,13 @@
 import { chat, type ChatMessage } from "@/lib/server/receptionist";
-import { allow } from "@/lib/server/rateLimit";
+import { allow, clientKey } from "@/lib/server/rateLimit";
 
 export const dynamic = "force-dynamic";
 
 // The public booking chat. Each turn is a paid Claude call, so it is rate-limited
 // per visitor and overall.
 export async function POST(req: Request) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-  if (!allow(`chat:${ip}`, 40, 60 * 60_000) || !allow("chat:all", 400, 24 * 60 * 60_000)) {
+  const ip = clientKey(req.headers);
+  if (!(await allow(`chat:${ip}`, 40, 60 * 60_000)) || !(await allow("chat:all", 400, 24 * 60 * 60_000))) {
     return Response.json({ error: "The receptionist is busy. Please try again later." }, { status: 429 });
   }
   if (!process.env.ANTHROPIC_API_KEY) return Response.json({ error: "The receptionist is offline (no AI key configured)." }, { status: 503 });

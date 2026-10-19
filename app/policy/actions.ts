@@ -15,7 +15,7 @@ export type ReadResult = { rules?: Rules; text?: string; error?: string };
 export async function readPolicy(_prev: ReadResult, form: FormData): Promise<ReadResult> {
   if (!(await isOwner())) redirect("/login");
   const text = String(form.get("policy") ?? "");
-  if (!allow("policy", 15, 60 * 60_000)) return { text, error: "Too many reads this hour. Try again later." };
+  if (!(await allow("policy", 15, 60 * 60_000))) return { text, error: "Too many reads this hour. Try again later." };
   try {
     return { text, rules: await compilePolicy({ anthropic: anthropic(), text, model: process.env.ANTHROPIC_MODEL || undefined }) };
   } catch (err) {

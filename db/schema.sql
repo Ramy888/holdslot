@@ -102,3 +102,10 @@ CREATE TABLE IF NOT EXISTS sweep_lock (
   locked_until  TEXT NOT NULL DEFAULT '1970-01-01T00:00:00.000Z'
 );
 INSERT OR IGNORE INTO sweep_lock (id) VALUES (1);
+
+-- Fixed-window counters for the limits on paid AI calls and the login (see lib/server/limits.mjs).
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key           TEXT PRIMARY KEY,
+  window_start  INTEGER NOT NULL,
+  count         INTEGER NOT NULL
+);
