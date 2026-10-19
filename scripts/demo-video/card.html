@@ -1,0 +1,38 @@
+<!doctype html>
+<!-- End card for the demo video. Local file, no external requests. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>HoldSlot card</title>
+    <style>
+      :root { --paper: #faf6f0; --ink: #2a1730; --muted: #6e5f6f; --plum: #5b2a63; --clasp: #f2a93b; --line: #eadfd4; }
+      html, body { margin: 0; width: 100vw; height: 100vh; background: var(--paper); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; overflow: hidden; }
+      .wrap { position: absolute; inset: 0; display: grid; grid-template-columns: 1.1fr 1fr; align-items: center; gap: 6vw; padding: 0 9vw; }
+      h1 { font-family: Georgia, "Times New Roman", serif; font-size: 11vh; line-height: 1; margin: 3vh 0 2.4vh; letter-spacing: -0.3vh; }
+      h1 span { color: var(--plum); }
+      p { font-size: 3.4vh; line-height: 1.35; color: var(--muted); margin: 0; }
+      .stack { margin-top: 3vh; font-size: 2.3vh; }
+      .url { margin-top: 2vh; font-size: 2.8vh; color: var(--plum); font-weight: 600; }
+      .card { background: #fff; border: 1px solid var(--line); border-radius: 2.6vh; padding: 3.6vh; box-shadow: 0 2vh 6vh -3vh rgba(42, 23, 48, 0.35); }
+      .row { display: flex; align-items: center; gap: 1.6vh; font-size: 2.6vh; margin: 1.6vh 0; }
+      .dot { width: 1.8vh; height: 1.8vh; border-radius: 50%; flex: none; }
+      .row small { display: block; color: var(--muted); font-size: 2vh; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div>
+        <svg viewBox="0 0 32 32" width="96" height="96" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#5b2a63" /><rect x="8" y="7" width="5" height="18" rx="2.5" fill="#faf6f0" /><rect x="19" y="7" width="5" height="18" rx="2.5" fill="#faf6f0" /><rect x="10.5" y="13.5" width="11" height="5" rx="2.5" fill="#f2a93b" /></svg>
+        <h1>Hold<span>Slot</span></h1>
+        <p>A deposit that only holds: placed for risky bookings, released when the client walks in.</p>
+        <p class="stack">PayPal Vault · Orders (authorize) · Payments (void, capture, partial capture) · AI receptionist · Bryntum Scheduler</p>
+        <p class="url">holdslot.ramy-comm.workers.dev</p>
+      </div>
+      <div class="card">
+        <div class="row"><span class="dot" style="background:#0f766e"></span><div>Released<small>the client checked in; the hold is voided</small></div></div>
+        <div class="row"><span class="dot" style="background:#b45309"></span><div>Held<small>PayPal authorization, nothing charged</small></div></div>
+        <div class="row"><span class="dot" style="background:#be123c"></span><div>Charged<small>a no-show, by the policy the owner approved</small></div></div>
+      </div>
+    </div>
+  </body>
+</html>
